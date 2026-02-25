@@ -35,7 +35,6 @@ const pluginPlugin: Plugin = {
           case "list":
           case "ls": {
             const prefix = process.env.CMD_PREFIX || ".";
-            const copyCmd = (cmd: string) => `<a href="tg://copy?text=${encodeURIComponent(prefix + cmd)}">${fmt.code(cmd)}</a>`;
             
             // 扫描本地插件目录
             const pluginsDir = join(process.cwd(), "plugins");
@@ -62,64 +61,62 @@ const pluginPlugin: Plugin = {
             
             // 获取已安装的内置插件
             const installedPlugins = pluginManager.getAllPlugins();
-            const installedExternal = availablePlugins.filter(p => p.installed);
             const notInstalled = availablePlugins.filter(p => !p.installed);
+            const externalInstalled = installedPlugins.filter(p => 
+              !['help', 'plugin', 'debug', 'sudo', 'exec', 'sysinfo'].includes(p.name)
+            );
             
             // 构建消息
-            const externalInstalled = installedPlugins.filter(p => !['help', 'plugin', 'debug', 'sudo', 'exec', 'sysinfo'].includes(p.name));
-            let text = fmt.bold("🔌 插件中心") + " ";
-            text += `共${availablePlugins.length}个 已装${externalInstalled.length}个\n\n`;
+            let text = fmt.bold("🔌 插件中心") + "\n";
+            text += `可用: ${availablePlugins.length}个 | 已装: ${externalInstalled.length}个\n\n`;
             
-            // 1. 可安装插件（带详细介绍）
+            // 1. 可安装插件
             if (notInstalled.length > 0) {
-              text += fmt.bold("📥 可安装") + "\n";
+              text += fmt.bold("📥 可安装插件") + "\n";
               
-              let availableText = "";
-              for (const plugin of notInstalled.slice(0, 6)) { // 最多显示6个
+              for (let i = 0; i < Math.min(notInstalled.length, 5); i++) {
+                const plugin = notInstalled[i];
                 const installCmd = prefix + "plugin install " + plugin.name;
-                const installBtn = `<a href="tg://copy?text=${encodeURIComponent(installCmd)}">[安装]</a>`;
                 
-                // 第一行：名称 + 安装按钮
-                availableText += `${plugin.name} ${installBtn}\n`;
+                // 插件名称行
+                text += `\n${i + 1}. ${fmt.bold(plugin.name)}\n`;
                 
-                // 第二行：描述（简短）
-                const shortDesc = plugin.description.split("\n")[0].slice(0, 30);
-                availableText += `  ${shortDesc}${plugin.description.length > 30 ? ".." : ""}\n`;
+                // 描述（多行显示，不截断）
+                const descLines = plugin.description.split("\n")[0].slice(0, 50);
+                text += `   描述: ${descLines}${plugin.description.length > 50 ? ".." : ""}\n`;
                 
-                // 第三行：命令（简洁格式）
+                // 命令
                 if (plugin.commands.length > 0) {
-                  const cmdStr = plugin.commands.slice(0, 3).join(" ");
-                  availableText += `  cmd: ${cmdStr}${plugin.commands.length > 3 ? "+" : ""}\n`;
+                  text += `   命令: ${plugin.commands.join(" ")}\n`;
                 }
                 
-                availableText += "\n";
+                // 作者和版本
+                text += `   作者: ${plugin.author} | v${plugin.version}\n`;
+                
+                // 安装按钮
+                text += `   <a href="tg://copy?text=${encodeURIComponent(installCmd)}">[点击安装]</a>\n`;
               }
               
-              if (notInstalled.length > 6) {
-                availableText += `...还有${notInstalled.length - 6}个插件\n`;
+              if (notInstalled.length > 5) {
+                text += `\n...还有 ${notInstalled.length - 5} 个插件\n`;
               }
               
-              text += `<blockquote expandable>${availableText.trim()}</blockquote>\n\n`;
+              text += "\n";
             }
             
-            // 2. 已安装插件 - 简洁显示
+            // 2. 已安装插件
             if (externalInstalled.length > 0) {
-              text += fmt.bold("✅ 已安装") + "\n";
+              text += fmt.bold("✅ 已安装插件") + "\n\n";
               
-              let installedText = "";
               for (const plugin of externalInstalled) {
                 const cmds = getPluginCmds(plugin);
-                // 只显示命令名，不加前缀，不用 code 格式，避免截断
-                const cmdStr = cmds.length > 0 
-                  ? cmds.slice(0, 3).join(" ") + (cmds.length > 3 ? "+" : "")
-                  : "-";
-                installedText += `${plugin.name}: ${cmdStr}\n`;
+                const cmdStr = cmds.length > 0 ? cmds.join(" ") : "无";
+                text += `• ${plugin.name}\n`;
+                text += `  命令: ${cmdStr}\n\n`;
               }
-              
-              text += `<blockquote expandable>${installedText.trim()}</blockquote>\n\n`;
             }
             
-            text += `💡 点击安装按钮或发送 ${prefix}plugin install <名称>`;
+            text += `💡 发送 ${prefix}plugin install <名称> 安装插件`;
             
             await ctx.replyHTML(text);
             break;
@@ -261,7 +258,7 @@ const pluginPlugin: Plugin = {
               }
               
               let text = fmt.bold("🏷️ 命令别名") + "\n\n";
-              text += `<blockquote expandable>${aliasListText.trim()}</blockquote>`;
+              text += aliasListText;
               await ctx.replyHTML(text);
             }
             break;
@@ -269,16 +266,14 @@ const pluginPlugin: Plugin = {
 
           default: {
             const prefix = process.env.CMD_PREFIX || ".";
-            const copyCmd = (cmd: string, desc: string) => `<a href="tg://copy?text=${encodeURIComponent(prefix + cmd)}">${fmt.code(prefix + cmd)}</a> - ${desc}`;
             
             let text = fmt.bold("🔌 插件管理") + "\n\n";
-            text += copyCmd("plugin list", "列出所有插件") + "\n";
-            text += copyCmd("plugin install <名称>", "安装插件") + "\n";
-            text += copyCmd("plugin remove <名称>", "卸载插件") + "\n";
-            text += copyCmd("plugin reload <name>", "重载指定插件") + "\n";
-            text += copyCmd("plugin reloadall", "重载所有插件") + "\n";
-            text += copyCmd("plugin alias", "查看别名列表");
-            await ctx.replyHTML(text);
+            text += `${prefix}plugin list — 查看插件列表\n`;
+            text += `${prefix}plugin install <名称> — 安装插件\n`;
+            text += `${prefix}plugin remove <名称> — 卸载插件\n`;
+            text += `${prefix}plugin reload <名称> — 重载插件\n`;
+            text += `${prefix}plugin alias — 命令别名管理`;
+            await ctx.reply(text);
           }
         }
       },
