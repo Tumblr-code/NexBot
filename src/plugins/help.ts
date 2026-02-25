@@ -1,6 +1,6 @@
 import { Plugin } from "../types/index.js";
 import { pluginManager } from "../core/pluginManager.js";
-import { fmt } from "../utils/context.js";
+import { fmt, escapeHTML } from "../utils/context.js";
 import { VERSION } from "../utils/version.js";
 
 const helpPlugin: Plugin = {
@@ -105,7 +105,9 @@ const helpPlugin: Plugin = {
               
               // 取第一个命令作为代表
               const mainCmd = cmds[0] || plugin.name;
-              const shortDesc = plugin.description?.split('\n')[0]?.slice(0, 12) || '插件';
+              // 转义 HTML 特殊字符，防止破坏显示
+              const rawDesc = plugin.description?.split('\n')[0]?.slice(0, 12) || '插件';
+              const shortDesc = escapeHTML(rawDesc);
               
               commandsText += `${copyCmd(mainCmd, shortDesc)} `;
             }
