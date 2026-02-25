@@ -107,16 +107,16 @@ const pluginPlugin: Plugin = {
               inlineKeyboard.push(currentRow);
             }
             
-            // 2. 已安装插件（带折叠，命令显示）
+            // 2. 已安装插件（带折叠，命令可点击复制）
             if (externalInstalled.length > 0) {
               text += fmt.bold("✅ 已安装插件") + "\n";
               
               let installedText = "";
               for (const plugin of externalInstalled) {
                 const cmds = getPluginCmds(plugin);
-                // 命令显示（不带复制链接）
+                // 命令做成可点击复制的代码格式（显示完整命令带前缀）
                 const cmdList = cmds.length > 0 
-                  ? cmds.map(c => fmt.code(c)).join(" ")
+                  ? cmds.map(c => `<a href="tg://copy?text=${encodeURIComponent(prefix + c)}">${fmt.code(prefix + c)}</a>`).join(" ")
                   : fmt.italic("无命令");
                 installedText += `• ${plugin.name} — ${cmdList}\n`;
               }
