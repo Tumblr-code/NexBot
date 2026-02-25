@@ -6,10 +6,18 @@ export function createContext(
   msg: Message,
   isSudo: boolean
 ): CommandContext {
-  const chatId = msg.chatId || (msg as any).peerId?.userId;
   const messageId = msg.id;
+  
+  // 获取 chatId - 优先使用 msg.chatId，私聊时直接使用 chat.id
+  let chatId: any = msg.chatId;
+  if (!chatId && msg.chat?.id) {
+    chatId = msg.chat.id;
+  }
+  
+  // 获取消息来自的聊天对象用于 sendMessage
+  const chat = msg.chat;
 
-  if (!chatId) {
+  if (!chatId && !chat) {
     throw new Error("无法获取聊天 ID");
   }
 
@@ -21,7 +29,9 @@ export function createContext(
     isChannel: msg.chat?.className === "Channel" && !(msg.chat as any).megagroup,
 
     async reply(text: string, options: ReplyOptions = {}): Promise<Api.Message> {
-      return await client.sendMessage(chatId, {
+      // 使用 chat 对象或 chatId
+      const target = chat || chatId;
+      return await client.sendMessage(target, {
         message: text,
         replyTo: options.replyToMessageId ? Number(options.replyToMessageId) : Number(messageId),
         parseMode: options.parseMode,
@@ -36,7 +46,8 @@ export function createContext(
 
     async deleteMessage(): Promise<void> {
       try {
-        await client.deleteMessages(chatId, [messageId], { revoke: true });
+        const target = chat || chatId;
+        await client.deleteMessages(target, [messageId], { revoke: true });
       } catch (err) {
         // 忽略删除错误
       }
