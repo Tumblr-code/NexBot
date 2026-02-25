@@ -648,7 +648,7 @@ const messageHandler = async (msg: Api.Message): Promise<void> => {
       if (targetUserId && targetUserId !== myId && !allowedUsers.has(targetUserId)) {
         allowedUsers.set(targetUserId, {
           verifiedAt: Date.now(),
-          username: (chat as any).username,
+          username: (chat as any)?.username,
         });
         saveData();
         console.log(`[privateguard] 主动私聊用户 ${targetUserId}，已自动加入白名单`);
