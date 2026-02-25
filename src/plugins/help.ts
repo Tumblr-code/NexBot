@@ -59,10 +59,6 @@ const helpPlugin: Plugin = {
             detailText += "\n别名: " + def.aliases.join(", ") + "\n";
           }
           
-          if (def.sudo) {
-            detailText += "\n⚠️ 需要 sudo 权限\n";
-          }
-          
           if (def.examples && def.examples.length > 0) {
             detailText += "\n示例:\n";
             for (const ex of def.examples) {
@@ -76,29 +72,41 @@ const helpPlugin: Plugin = {
 
           await ctx.replyHTML(text);
         } else {
-          // 显示主帮助 - 常用命令列表放入折叠块
+          // 显示主帮助 - 包含项目简介
+          const botName = process.env.BOT_NAME || "NexBot";
+          const botVersion = process.env.BOT_VERSION || "1.0.0";
+          
+          let text = fmt.bold("🤖 " + botName + " v" + botVersion) + "\n\n";
+          
+          // 项目简介
+          text += "<i>一款功能强大的 Telegram Bot 框架，支持插件扩展、系统监控、网盘搜索等功能。</i>\n\n";
+          
+          // 命令前缀说明
+          text += "前缀: " + fmt.code(prefix) + "\n";
+          text += "使用 " + fmt.code(prefix + "help <命令>") + " 查看详细帮助\n\n";
+          
+          // 常用命令列表（放入折叠块）
           let commandsText = "";
           commandsText += "help - 显示帮助\n";
           commandsText += "ping - 测试延迟\n";
-          commandsText += "id - 获取用户信息\n";
-          commandsText += "sysinfo - 系统信息\n";
-          commandsText += "speedtest - 网速测试\n";
-          commandsText += "plugin list - 查看插件命令\n";
+          commandsText += "id - 获取聊天信息\n";
+          commandsText += "echo - 回声测试\n\n";
           
-          // sudo 命令（如果用户是 sudo）
-          if (ctx.isSudo) {
-            commandsText += "\n👑 管理命令:\n";
-            commandsText += "sudo - 权限管理\n";
-            commandsText += "plugin - 插件管理\n";
-            commandsText += "exec - 执行命令\n";
-          }
+          commandsText += "📊 系统信息:\n";
+          commandsText += "  sysinfo - 系统状态\n";
+          commandsText += "  uptime - 运行时间\n";
+          commandsText += "  health - 健康检查\n";
+          commandsText += "  db - 数据库统计\n";
+          commandsText += "  cache - 缓存统计\n";
+          commandsText += "  ratelimit - 限流统计\n\n";
           
-          let text = fmt.bold("🤖 NexBot 帮助") + "\n\n";
-          text += "前缀: " + fmt.code(prefix) + "\n";
-          text += "使用 " + fmt.code(prefix + "help <命令>") + " 查看详细信息\n\n";
+          commandsText += "🔍 其他功能:\n";
+          commandsText += "  speedtest - 网速测试\n";
+          commandsText += "  pan - 网盘搜索\n";
+          commandsText += "  plugin list - 插件列表";
+          
           text += fmt.bold("📌 常用命令") + "\n";
-          text += `<blockquote expandable>${commandsText.trim()}</blockquote>\n\n`;
-          text += fmt.italic("更多命令请使用 ") + fmt.code(prefix + "plugin list");
+          text += `<blockquote expandable>${commandsText}</blockquote>`;
           
           await ctx.replyHTML(text);
         }
