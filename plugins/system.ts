@@ -185,7 +185,7 @@ const systemPlugin: Plugin = {
 
       handler: async (msg, args, ctx) => {
         try {
-          const lines = parseInt(args.trim()) || 30;
+          const lines = parseInt(args.join(" ").trim()) || 30;
           const validLines = Math.min(Math.max(lines, 10), 100);
 
           await (msg as any).edit({
@@ -232,7 +232,7 @@ const systemPlugin: Plugin = {
 
       handler: async (msg, args, ctx) => {
         try {
-          if (!args.trim()) {
+          if (!args.join(" ").trim()) {
             return (msg as any).edit({
               text: `${EMOJI.ERROR} <b>命令为空</b>\n\n用法: .sys <命令>`,
               parseMode: "html",

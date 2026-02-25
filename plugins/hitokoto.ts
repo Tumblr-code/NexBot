@@ -42,7 +42,7 @@ const hitokotoPlugin: Plugin = {
 
           // 解析参数
           let typeParam = "";
-          const typeArg = args.trim().toLowerCase();
+          const typeArg = args.join(" ").trim().toLowerCase();
           const typeMap: Record<string, string> = {
             "动画": "a", "漫画": "b", "游戏": "c", "文学": "d",
             "原创": "e", "网络": "f", "其他": "g", "影视": "h",
