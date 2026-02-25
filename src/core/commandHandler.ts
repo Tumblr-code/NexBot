@@ -78,7 +78,7 @@ export class CommandHandler {
       const isSudo = true; // 登录用户就是 sudo
 
       // 限流检查
-      const rateLimitKey = `${senderIdNum}:${cmdName}`;
+      const rateLimitKey = `${senderId}:${cmdName}`;
       const rateCheck = defaultRateLimiter.record(rateLimitKey);
       
       if (!rateCheck.allowed) {
