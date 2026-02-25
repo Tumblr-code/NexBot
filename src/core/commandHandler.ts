@@ -64,22 +64,18 @@ export class CommandHandler {
         return;
       }
 
-      // 检查权限 - 只允许特定用户使用所有命令
-      const OWNER_ID = 7873158072; // 你的用户ID
+      // 检查权限 - 获取当前登录用户作为 OWNER
+      const me = await this.client.getMe();
+      const OWNER_ID = me?.id?.toString() || process.env.OWNER_ID || "7873158072";
       const senderId = msg.senderId?.toString() || "";
-      const senderIdNum = parseInt(senderId);
-      if (isNaN(senderIdNum)) {
-        logger.warn(`无法解析发送者 ID: ${senderId}`);
-        return;
-      }
       
-      // 只有你能使用命令
-      if (senderIdNum !== OWNER_ID) {
+      // 发送者 ID 必须与 OWNER_ID 匹配
+      if (senderId !== OWNER_ID.toString()) {
         // 其他人发来的命令，静默忽略
         return;
       }
       
-      const isSudo = true; // 你就是sudo
+      const isSudo = true; // 登录用户就是 sudo
 
       // 限流检查
       const rateLimitKey = `${senderIdNum}:${cmdName}`;
