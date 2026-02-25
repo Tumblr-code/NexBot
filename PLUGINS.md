@@ -442,6 +442,46 @@ const CONFIG = {
 
 ---
 
+### 10. system - 系统管理
+
+**文件**: `plugins/system.ts`
+
+**命令**: `update`, `upgrade`, `restart`, `status`, `logs`, `sys`
+
+**功能**: 系统管理命令，包括更新代码、升级依赖、重启Bot、查看状态/日志等。
+
+**命令说明**:
+
+| 命令 | 描述 | 示例 |
+|------|------|------|
+| `update` / `pull` | 从GitHub拉取最新代码 | `.update` |
+| `upgrade` | 升级项目依赖（bun install） | `.upgrade` |
+| `restart` / `reboot` | 重启Bot | `.restart` |
+| `status` | 查看系统状态（Git/版本/运行时间） | `.status` |
+| `logs [行数]` | 查看日志（默认30行，10-100） | `.logs 50` |
+| `sys <命令>` | 执行系统命令（有安全检查） | `.sys ps aux` |
+
+**status 显示内容**:
+- Git 分支和提交信息
+- 工作区是否有未提交更改
+- NexBot 版本号
+- Node.js 版本和平台信息
+- Bot 运行时间和内存使用
+- 进程 PID
+
+**logs 用法**:
+```
+.logs        # 查看最近30行
+.logs 50     # 查看最近50行
+.logs 100    # 查看最近100行
+```
+
+**sys 命令安全限制**:
+- 禁止执行危险命令（rm -rf /, shutdown, reboot 等）
+- 建议仅用于简单查询（ps, df, free 等）
+
+---
+
 ## 🛠️ 开发插件
 
 ### 基础插件结构

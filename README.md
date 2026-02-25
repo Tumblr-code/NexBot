@@ -125,6 +125,7 @@ bun run dev
 | **weather** | `weather` | 天气查询（支持全球城市） |
 | **ip** | `ip` | IP/域名查询（地理位置+ISP） |
 | **crazy4** | `crazy4` | 疯狂星期四文案 |
+| **system** | `update/upgrade/restart/status/logs/sys` | 系统管理（更新/重启/日志） |
 
 #### AI 插件子命令
 
