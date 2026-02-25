@@ -58,7 +58,7 @@ const pluginPlugin: Plugin = {
             
             // 构建最终消息
             let text = fmt.bold("📦 已加载插件和命令") + "\n\n";
-            text += `<blockquote>${pluginListText.trim()}</blockquote>\n\n`;
+            text += `<blockquote expandable>${pluginListText.trim()}</blockquote>\n\n`;
             text += "使用 " + fmt.code(prefix + "help <命令>") + " 查看详细帮助";
             
             await ctx.replyHTML(text);
@@ -201,7 +201,7 @@ const pluginPlugin: Plugin = {
               }
               
               let text = fmt.bold("🏷️ 命令别名") + "\n\n";
-              text += `<blockquote>${aliasListText.trim()}</blockquote>`;
+              text += `<blockquote expandable>${aliasListText.trim()}</blockquote>`;
               await ctx.replyHTML(text);
             }
             break;

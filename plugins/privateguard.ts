@@ -838,7 +838,7 @@ const listCommand = async (msg: Api.Message): Promise<void> => {
   let text = "<b>📊 私聊保护统计</b>\n\n";
   text += `✅ 已验证用户：${allowedList.length} 人\n`;
   text += `⏳ 验证中用户：${pendingList.length} 人\n\n`;
-  text += `<blockquote>${userListText.trim()}</blockquote>`;
+  text += `<blockquote expandable>${userListText.trim()}</blockquote>`;
 
   await client.sendMessage(msg.chatId!, {
     message: text,
@@ -951,7 +951,7 @@ const listBlockedCommand = async (msg: Api.Message): Promise<void> => {
 
   let text = "<b>🚫 黑名单列表</b>\n\n";
   text += `共 ${blockedList.length} 人\n\n`;
-  text += `<blockquote>${blockedListText.trim()}</blockquote>`;
+  text += `<blockquote expandable>${blockedListText.trim()}</blockquote>`;
 
   await client.sendMessage(msg.chatId!, {
     message: text,

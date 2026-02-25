@@ -107,7 +107,7 @@ const sudoPlugin: Plugin = {
             userListText += "\n总计: " + sudoList.length + " 人";
             
             let text = fmt.bold("👑 Sudo 用户列表") + "\n\n";
-            text += `<blockquote>${userListText.trim()}</blockquote>`;
+            text += `<blockquote expandable>${userListText.trim()}</blockquote>`;
             await ctx.replyHTML(text);
             break;
           }

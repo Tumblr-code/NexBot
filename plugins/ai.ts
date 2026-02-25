@@ -1820,7 +1820,7 @@ const help_text = `🔧 ✨ <b>新增功能</b>
 • 🧠 可选上下文记忆、📰 长文自动发布 Telegraph、🧾 消息折叠显示
 • 🎯 全局Prompt预设：为所有对话设置统一的系统提示词
 
-<blockquote>💬 <b>对话</b>
+<blockquote expandable>💬 <b>对话</b>
 <code>${mainPrefix}ai chat [问题]</code>
 • 示例：<code>${mainPrefix}ai chat 你好，帮我简单介绍一下你</code>
 • 支持多轮对话（可执行 <code>${mainPrefix}ai context on</code> 开启记忆）
@@ -1991,7 +1991,7 @@ class AiPlugin extends Plugin {
             }
             Store.data.presetPrompt = promptContent;
             await Store.writeSoon();
-            await msg.edit({ text: `✅ 已设置全局Prompt预设\n\n<blockquote>${html(promptContent)}</blockquote>`, parseMode: "html" });
+            await msg.edit({ text: `✅ 已设置全局Prompt预设\n\n<blockquote expandable>${html(promptContent)}</blockquote>`, parseMode: "html" });
             return;
           }
           if (a0 === "clear") {
@@ -2006,7 +2006,7 @@ class AiPlugin extends Plugin {
               await msg.edit({ text: "📝 当前未设置全局Prompt预设", parseMode: "html" });
               return;
             }
-            await sendLong(msg, `📝 <b>当前全局Prompt预设</b>\n\n<blockquote>${html(currentPrompt)}</blockquote>`);
+            await sendLong(msg, `📝 <b>当前全局Prompt预设</b>\n\n<blockquote expandable>${html(currentPrompt)}</blockquote>`);
             return;
           }
           await msg.edit({ text: "❌ 未知 prompt 子命令\n支持: set|clear|show", parseMode: "html" });
@@ -2449,7 +2449,7 @@ class AiPlugin extends Plugin {
             const openaiList = OPENAI_VOICES.map((v, i) => `${i + 1}. ${v}`).join("\n");
             const header = `🎤 <b>可用音色列表</b>\n\n<b>当前配置:</b>\nGemini: <code>${Store.data.voices.gemini}</code>\nOpenAI: <code>${Store.data.voices.openai}</code>\n\n`;
             const collapsedContent = `<b>Gemini (${GEMINI_VOICES.length}种):</b>\n${geminiList}\n\n<b>OpenAI (${OPENAI_VOICES.length}种):</b>\n${openaiList}`;
-            const txt = header + `<blockquote>${collapsedContent}</blockquote>`;
+            const txt = header + `<blockquote expandable>${collapsedContent}</blockquote>`;
             await sendLong(msg, txt);
             return;
           }
