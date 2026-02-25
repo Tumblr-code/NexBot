@@ -42,13 +42,17 @@ export function createContext(
 
     async replyHTML(html: string, options: ReplyOptions = {}): Promise<Api.Message> {
       const target = chat || chatId;
-      return await client.sendMessage(target, {
+      const sendOptions: any = {
         message: html,
         replyTo: options.replyToMessageId ? Number(options.replyToMessageId) : Number(messageId),
         parseMode: "html",
         silent: options.silent,
         linkPreview: options.disableWebPagePreview === false,
-      });
+      };
+      if (options.replyMarkup) {
+        sendOptions.buttons = options.replyMarkup.inlineKeyboard || options.replyMarkup;
+      }
+      return await client.sendMessage(target, sendOptions);
     },
 
     async deleteMessage(): Promise<void> {

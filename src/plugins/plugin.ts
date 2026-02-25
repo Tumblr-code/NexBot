@@ -71,44 +71,65 @@ const pluginPlugin: Plugin = {
             let text = fmt.bold("🔌 插件中心") + "\n";
             text += `可用: ${availablePlugins.length}个 | 已装: ${externalInstalled.length}个\n\n`;
             
-            // 1. 可安装插件（带折叠，名称可点击复制安装命令）
+            // 构建 inline keyboard 按钮（每行2个）
+            const inlineKeyboard: any[] = [];
+            let currentRow: any[] = [];
+            
+            // 1. 可安装插件（带折叠，使用 copyText 按钮）
             if (notInstalled.length > 0) {
               text += fmt.bold("📥 可安装插件") + "\n";
               
               let availableText = "";
               for (const plugin of notInstalled) {
                 // 构建安装命令
-                const installCmdText = prefix + "plugin install " + plugin.name;
-                // 插件名称可点击复制安装命令，清理描述防止显示异常
+                const installCmd = `${prefix}plugin install ${plugin.name}`;
+                // 清理描述防止显示异常
                 const cleanDesc = cleanPluginDescription(plugin.description, 20);
-                // 不使用 encodeURIComponent，直接拼接URL（Telegram 会自动处理）
-                const copyUrl = "tg://copy?text=" + encodeURI(installCmdText);
-                availableText += `• <a href="${copyUrl}">${fmt.code(plugin.name)}</a> — ${escapeHTML(cleanDesc)}\n`;
+                // 直接显示插件名（不带链接），描述紧随其后
+                availableText += `• ${fmt.code(plugin.name)} — ${escapeHTML(cleanDesc)}\n`;
+                
+                // 添加复制按钮（每行2个）
+                currentRow.push({
+                  text: `📋 ${plugin.name}`,
+                  copyText: installCmd,
+                });
+                if (currentRow.length === 2) {
+                  inlineKeyboard.push(currentRow);
+                  currentRow = [];
+                }
               }
               
               text += `<blockquote expandable>${availableText.trim()}</blockquote>\n\n`;
             }
             
-            // 2. 已安装插件（带折叠，命令可点击复制）
+            // 添加剩余的按钮
+            if (currentRow.length > 0) {
+              inlineKeyboard.push(currentRow);
+            }
+            
+            // 2. 已安装插件（带折叠，命令显示）
             if (externalInstalled.length > 0) {
               text += fmt.bold("✅ 已安装插件") + "\n";
               
               let installedText = "";
               for (const plugin of externalInstalled) {
                 const cmds = getPluginCmds(plugin);
-                // 命令做成可点击复制的代码格式（显示全部命令）
-                const cmdLinks = cmds.length > 0 
-                  ? cmds.map(c => `<a href="tg://copy?text=${encodeURIComponent(prefix + c)}">${fmt.code(c)}</a>`).join(" ")
+                // 命令显示（不带复制链接）
+                const cmdList = cmds.length > 0 
+                  ? cmds.map(c => fmt.code(c)).join(" ")
                   : fmt.italic("无命令");
-                installedText += `• ${plugin.name} — ${cmdLinks}\n`;
+                installedText += `• ${plugin.name} — ${cmdList}\n`;
               }
               
               text += `<blockquote expandable>${installedText.trim()}</blockquote>\n\n`;
             }
             
-            text += `💡 点击插件名复制安装命令`;
+            text += `💡 点击下方按钮复制安装命令`;
             
-            await ctx.replyHTML(text);
+            // 使用 replyHTML 的 options 参数添加 inline keyboard
+            const message = await ctx.replyHTML(text, {
+              replyMarkup: inlineKeyboard.length > 0 ? { inlineKeyboard } : undefined,
+            });
             break;
           }
 

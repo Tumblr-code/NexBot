@@ -28,6 +28,7 @@ export interface ReplyOptions {
   replyToMessageId?: number;
   disableWebPagePreview?: boolean;
   silent?: boolean;
+  replyMarkup?: any;
 }
 
 // 命令处理器类型 (TeleBox 兼容)
