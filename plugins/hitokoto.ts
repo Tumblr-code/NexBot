@@ -1,134 +1,85 @@
 /**
- * 一言插件 - 改编自 TeleBox hitokoto
- * 功能：从 hitokoto.cn 获取随机一言
+ * 一言插件
  */
 
 import { Plugin } from "../src/types/index.js";
 import axios from "axios";
 
-// 应用Emoji
 const EMOJI = {
-  QUOTE: "💬",
-  BOOK: "📚",
-  LOADING: "🔄",
-  ERROR: "❌",
-  HELP: "❓",
+  QUOTE: "💬", SOURCE: "📖", AUTHOR: "✍️",
+  LOADING: "🔄", ERROR: "❌",
 };
 
-// 一言类型映射
-const hitokotoTypeMap: Record<string, string> = {
-  "a": "动画",
-  "b": "漫画",
-  "c": "游戏",
-  "d": "文学",
-  "e": "原创",
-  "f": "网络",
-  "g": "其他",
-  "h": "影视",
-  "i": "诗词",
-  "j": "网易云",
-  "k": "哲学",
-  "l": "抖机灵"
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+const HITOKOTO_TYPES: Record<string, string> = {
+  "a": "动画", "b": "漫画", "c": "游戏", "d": "文学",
+  "e": "原创", "f": "网络", "g": "其他", "h": "影视",
+  "i": "诗词", "j": "网易云", "k": "哲学", "l": "抖机灵",
 };
-
-// 一言响应接口
-interface HitokotoResponse {
-  hitokoto: string;
-  from?: string;
-  from_who?: string;
-  type: string;
-}
-
-const helpText = `${EMOJI.QUOTE} <b>一言插件</b>
-
-<b>功能：</b>
-• 从 hitokoto.cn 获取随机一言
-• 支持多种类型（动画、漫画、文学等）
-• 包含详细的来源信息
-
-<b>用法：</b>
-<code>.hitokoto</code> - 获取随机一言
-
-<b>支持的类型：</b>
-• 动画、漫画、游戏
-• 文学、影视、诗词
-• 哲学、网易云、抖机灵`;
-
-// HTML转义
-function htmlEscape(text: string): string {
-  if (typeof text !== "string") return "";
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 const hitokotoPlugin: Plugin = {
   name: "hitokoto",
   version: "1.0.0",
   description: "获取随机一言",
-  author: "TeleBox adapted for NexBot",
+  author: "NexBot",
 
   commands: {
     hitokoto: {
       description: "获取随机一言",
-      aliases: ["yiyan", "quote"],
+      aliases: ["yiyan", "yy", "一言"],
       examples: ["hitokoto"],
+
       handler: async (msg, args, ctx) => {
-        // 显示帮助
-        if (args.length > 0 && (args[0] === "help" || args[0] === "h")) {
-          await ctx.editHTML(helpText);
-          return;
-        }
+        try {
+          // 显示获取中
+          await (msg as any).edit({
+            text: `${EMOJI.LOADING} <b>正在获取一言...</b>\n\n正在连接服务器...`,
+            parseMode: "html",
+          });
+          
+          const startTime = Date.now();
 
-        let hitokotoData: HitokotoResponse | null = null;
-        let retryCount = 0;
-        const maxRetries = 3;
-
-        // 重试机制
-        while (retryCount < maxRetries && !hitokotoData) {
-          try {
-            const response = await axios.get(
-              "https://v1.hitokoto.cn/?charset=utf-8",
-              { timeout: 10000 }
-            );
-            hitokotoData = response.data;
-            break;
-          } catch (error) {
-            retryCount++;
-            if (retryCount >= maxRetries) {
-              await ctx.editHTML(`${EMOJI.ERROR} <b>获取一言失败</b>\n\n请稍后重试`);
-              return;
-            }
-            await new Promise(resolve => setTimeout(resolve, 1000));
+          // 解析参数
+          let typeParam = "";
+          const typeArg = args.trim().toLowerCase();
+          const typeMap: Record<string, string> = {
+            "动画": "a", "漫画": "b", "游戏": "c", "文学": "d",
+            "原创": "e", "网络": "f", "其他": "g", "影视": "h",
+            "诗词": "i", "网易云": "j", "哲学": "k", "抖机灵": "l",
+          };
+          
+          if (typeArg && typeMap[typeArg]) {
+            typeParam = `?c=${typeMap[typeArg]}`;
+          } else if (typeArg && HITOKOTO_TYPES[typeArg]) {
+            typeParam = `?c=${typeArg}`;
           }
-        }
 
-        if (!hitokotoData) {
-          await ctx.editHTML(`${EMOJI.ERROR} <b>无法获取一言数据</b>`);
-          return;
-        }
+          const response = await axios.get(`https://v1.hitokoto.cn/${typeParam}`, { timeout: 10000 });
+          const result = response.data;
+          
+          // 确保 loading 至少显示1秒
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 1000) await sleep(1000 - elapsed);
 
-        // 构建来源信息
-        let sourceInfo = "";
-        if (hitokotoData.from) {
-          sourceInfo += `《${htmlEscape(hitokotoData.from)}》`;
-        }
-        if (hitokotoData.type && hitokotoTypeMap[hitokotoData.type]) {
-          sourceInfo += `（${hitokotoTypeMap[hitokotoData.type]}）`;
-        }
-        if (hitokotoData.from_who) {
-          sourceInfo += ` - ${htmlEscape(hitokotoData.from_who)}`;
-        }
+          const typeName = HITOKOTO_TYPES[result.type] || "其他";
+          
+          let text = `${EMOJI.QUOTE} <b>一言</b> <i>${typeName}</i>\n\n`;
+          text += `<blockquote>${result.hitokoto}</blockquote>\n\n`;
+          text += `${EMOJI.SOURCE} 《${result.from || "未知"}》\n`;
+          text += `${EMOJI.AUTHOR} ${result.from_who || "佚名"}`;
 
-        // 构建最终消息
-        const finalText = sourceInfo
-          ? `${EMOJI.QUOTE} ${htmlEscape(hitokotoData.hitokoto)}\n\n${EMOJI.BOOK} ${sourceInfo}`
-          : `${EMOJI.QUOTE} ${htmlEscape(hitokotoData.hitokoto)}`;
-
-        await ctx.editHTML(finalText);
+          await (msg as any).edit({
+            text: text,
+            parseMode: "html",
+          });
+        } catch (err) {
+          console.error("[hitokoto] 错误:", err);
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>获取失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`,
+            parseMode: "html",
+          });
+        }
       },
     },
   },

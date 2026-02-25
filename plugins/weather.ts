@@ -1,348 +1,180 @@
 /**
- * 天气查询插件 - 改编自 TeleBox weather
- * 功能：查询全球城市天气信息（使用 Open-Meteo 免费API）
+ * 天气插件
  */
 
 import { Plugin } from "../src/types/index.js";
 import axios from "axios";
 
-// 应用Emoji
 const EMOJI = {
-  SUNNY: "☀️",
-  CLOUDY: "☁️",
-  RAINY: "🌧️",
-  SNOWY: "❄️",
-  FOGGY: "🌫️",
-  THUNDER: "⛈️",
-  SEARCH: "🔍",
-  TEMP: "🌡️",
-  WIND: "💨",
-  HUMIDITY: "💧",
-  PRESSURE: "📊",
-  SUNRISE: "🌅",
-  SUNSET: "🌇",
-  LOADING: "🔄",
-  ERROR: "❌",
-  HELP: "❓",
-  WORLD: "🌍",
-  CHINA: "🇨🇳",
+  SUN: "☀️", CLOUD: "☁️", CLOUD_SUN: "⛅", CLOUD_RAIN: "🌧️",
+  THERMOMETER: "🌡️", DROPLET: "💧", WIND: "🌬️", EYE: "👁️",
+  SUNRISE: "🌅", SUNSET: "🌇", ERROR: "❌", SEARCH: "🔍",
+  LOADING: "🔄", SUCCESS: "✅",
 };
 
-// Open-Meteo API 接口
-interface OpenMeteoResponse {
-  latitude: number;
-  longitude: number;
-  timezone: string;
-  timezone_abbreviation: string;
-  elevation: number;
-  current?: {
-    time: string;
-    interval: number;
-    temperature_2m: number;
-    relative_humidity_2m: number;
-    apparent_temperature: number;
-    precipitation: number;
-    rain: number;
-    snowfall: number;
-    weather_code: number;
-    cloud_cover: number;
-    pressure_msl: number;
-    surface_pressure: number;
-    wind_speed_10m: number;
-    wind_direction_10m: number;
-    wind_gusts_10m: number;
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+const CITY_DATABASE: Record<string, { lat: number; lon: number; name: string; country: string; admin1?: string }> = {
+  "北京": { lat: 39.9042, lon: 116.4074, name: "北京", country: "中国", admin1: "北京市" },
+  "上海": { lat: 31.2304, lon: 121.4737, name: "上海", country: "中国", admin1: "上海市" },
+  "广州": { lat: 23.1291, lon: 113.2644, name: "广州", country: "中国", admin1: "广东省" },
+  "深圳": { lat: 22.5431, lon: 114.0579, name: "深圳", country: "中国", admin1: "广东省" },
+  "成都": { lat: 30.5728, lon: 104.0668, name: "成都", country: "中国", admin1: "四川省" },
+  "杭州": { lat: 30.2741, lon: 120.1551, name: "杭州", country: "中国", admin1: "浙江省" },
+  "武汉": { lat: 30.5928, lon: 114.3055, name: "武汉", country: "中国", admin1: "湖北省" },
+  "西安": { lat: 34.3416, lon: 108.9398, name: "西安", country: "中国", admin1: "陕西省" },
+  "重庆": { lat: 29.5630, lon: 106.5516, name: "重庆", country: "中国", admin1: "重庆市" },
+  "南京": { lat: 32.0603, lon: 118.7969, name: "南京", country: "中国", admin1: "江苏省" },
+  "东京": { lat: 35.6895, lon: 139.6917, name: "东京", country: "日本" },
+  "纽约": { lat: 40.7128, lon: -74.0060, name: "纽约", country: "美国" },
+  "伦敦": { lat: 51.5074, lon: -0.1278, name: "伦敦", country: "英国" },
+};
+
+function getWeatherEmoji(code: number, isDay: number = 1): string {
+  const night = isDay === 0;
+  if (code === 0) return night ? "🌙" : EMOJI.SUN;
+  if (code === 1) return night ? "🌙" : EMOJI.CLOUD_SUN;
+  if (code === 2) return EMOJI.CLOUD_SUN;
+  if (code === 3) return EMOJI.CLOUD;
+  if (code >= 45 && code <= 48) return "🌫️";
+  if (code >= 51 && code <= 67) return EMOJI.CLOUD_RAIN;
+  if (code >= 71 && code <= 77) return "🌨️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code >= 95) return "⛈️";
+  return EMOJI.CLOUD;
+}
+
+function getWeatherDescription(code: number): string {
+  const descriptions: Record<number, string> = {
+    0: "晴朗", 1: "大部晴朗", 2: "多云", 3: "阴天",
+    45: "雾", 51: "毛毛雨", 61: "小雨", 63: "中雨", 65: "大雨",
+    71: "小雪", 73: "中雪", 75: "大雪", 95: "雷雨",
   };
-  daily?: {
-    time: string[];
-    weather_code: number[];
-    temperature_2m_max: number[];
-    temperature_2m_min: number[];
-    sunrise: string[];
-    sunset: string[];
-    precipitation_sum: number[];
-    wind_speed_10m_max: number[];
-  };
-}
-
-interface GeocodingResult {
-  results?: Array<{
-    id: number;
-    name: string;
-    latitude: number;
-    longitude: number;
-    country: string;
-    country_code: string;
-    admin1?: string;
-    admin2?: string;
-  }>;
-}
-
-// WMO天气代码映射
-const weatherCodeMap: Record<number, { icon: string; description: string }> = {
-  0: { icon: EMOJI.SUNNY, description: "晴朗" },
-  1: { icon: "🌤️", description: "大部晴朗" },
-  2: { icon: "⛅", description: "部分多云" },
-  3: { icon: EMOJI.CLOUDY, description: "阴天" },
-  45: { icon: EMOJI.FOGGY, description: "有雾" },
-  48: { icon: EMOJI.FOGGY, description: "沉积雾凇" },
-  51: { icon: "🌦️", description: "轻度细雨" },
-  53: { icon: "🌦️", description: "中度细雨" },
-  55: { icon: "🌦️", description: "密集细雨" },
-  56: { icon: EMOJI.SNOWY, description: "轻度冻雨" },
-  57: { icon: EMOJI.SNOWY, description: "密集冻雨" },
-  61: { icon: EMOJI.RAINY, description: "轻度降雨" },
-  63: { icon: EMOJI.RAINY, description: "中度降雨" },
-  65: { icon: EMOJI.RAINY, description: "强降雨" },
-  66: { icon: EMOJI.SNOWY, description: "轻度冻雨" },
-  67: { icon: EMOJI.SNOWY, description: "强冻雨" },
-  71: { icon: EMOJI.SNOWY, description: "轻度降雪" },
-  73: { icon: EMOJI.SNOWY, description: "中度降雪" },
-  75: { icon: EMOJI.SNOWY, description: "强降雪" },
-  77: { icon: "🌨️", description: "雪粒" },
-  80: { icon: "🌦️", description: "轻度阵雨" },
-  81: { icon: EMOJI.RAINY, description: "中度阵雨" },
-  82: { icon: EMOJI.THUNDER, description: "强阵雨" },
-  85: { icon: "🌨️", description: "轻度阵雪" },
-  86: { icon: "🌨️", description: "强阵雪" },
-  95: { icon: EMOJI.THUNDER, description: "雷暴" },
-  96: { icon: EMOJI.THUNDER, description: "轻度冰雹雷暴" },
-  99: { icon: EMOJI.THUNDER, description: "强冰雹雷暴" }
-};
-
-// 快速映射常见城市
-const quickCityMap: Record<string, string> = {
-  // 中国主要城市
-  "北京": "Beijing",
-  "上海": "Shanghai",
-  "广州": "Guangzhou",
-  "深圳": "Shenzhen",
-  "成都": "Chengdu",
-  "杭州": "Hangzhou",
-  "武汉": "Wuhan",
-  "西安": "Xi'an",
-  "重庆": "Chongqing",
-  "南京": "Nanjing",
-  "天津": "Tianjin",
-  "苏州": "Suzhou",
-  "长沙": "Changsha",
-  "郑州": "Zhengzhou",
-  "沈阳": "Shenyang",
-  "青岛": "Qingdao",
-  "宁波": "Ningbo",
-  "东莞": "Dongguan",
-  "佛山": "Foshan",
-  "合肥": "Hefei",
-  "大连": "Dalian",
-  "厦门": "Xiamen",
-  "福州": "Fuzhou",
-  "哈尔滨": "Harbin",
-  "济南": "Jinan",
-  "长春": "Changchun",
-  "昆明": "Kunming",
-  "南宁": "Nanning",
-  "贵阳": "Guiyang",
-  "兰州": "Lanzhou",
-  "海口": "Haikou",
-  "乌鲁木齐": "Urumqi",
-  "银川": "Yinchuan",
-  "西宁": "Xining",
-  "拉萨": "Lhasa",
-  "呼和浩特": "Hohhot",
-  "太原": "Taiyuan",
-  "石家庄": "Shijiazhuang",
-  "南昌": "Nanchang",
-  "香港": "Hong Kong",
-  "澳门": "Macau",
-  "台北": "Taipei",
-  // 国际主要城市
-  "东京": "Tokyo",
-  "大阪": "Osaka",
-  "首尔": "Seoul",
-  "新加坡": "Singapore",
-  "曼谷": "Bangkok",
-  "吉隆坡": "Kuala Lumpur",
-  "雅加达": "Jakarta",
-  "马尼拉": "Manila",
-  "河内": "Hanoi",
-  "胡志明市": "Ho Chi Minh City",
-  "新德里": "New Delhi",
-  "孟买": "Mumbai",
-  "迪拜": "Dubai",
-  "伦敦": "London",
-  "巴黎": "Paris",
-  "柏林": "Berlin",
-  "马德里": "Madrid",
-  "罗马": "Rome",
-  "阿姆斯特丹": "Amsterdam",
-  "莫斯科": "Moscow",
-  "纽约": "New York",
-  "洛杉矶": "Los Angeles",
-  "旧金山": "San Francisco",
-  "芝加哥": "Chicago",
-  "西雅图": "Seattle",
-  "波士顿": "Boston",
-  "迈阿密": "Miami",
-  "拉斯维加斯": "Las Vegas",
-  "温哥华": "Vancouver",
-  "多伦多": "Toronto",
-  "悉尼": "Sydney",
-  "墨尔本": "Melbourne",
-  "奥克兰": "Auckland",
-};
-
-// HTML转义
-function htmlEscape(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-// 风向计算
-function calcWindDirection(deg: number): string {
-  const dirs = ["北", "北东北", "东北", "东东北", "东", "东东南", "东南", "南东南",
-    "南", "南西南", "西南", "西西南", "西", "西西北", "西北", "北西北"];
-  const ix = Math.round(deg / 22.5);
-  return dirs[ix % 16];
+  return descriptions[code] || "未知";
 }
 
 const weatherPlugin: Plugin = {
   name: "weather",
   version: "1.0.0",
   description: "查询全球城市天气",
-  author: "TeleBox adapted for NexBot",
+  author: "NexBot",
 
   commands: {
     weather: {
-      description: "查询城市天气",
-      aliases: ["tianqi", "tq"],
-      examples: ["weather 北京", "weather Shanghai", "weather Tokyo"],
+      description: "查询天气",
+      aliases: ["wt", "tq"],
+      examples: ["weather 北京"],
+
       handler: async (msg, args, ctx) => {
         try {
-          // 无参数显示帮助
-          if (args.length === 0) {
-            await ctx.editHTML(
-              `${EMOJI.WORLD} <b>天气查询</b>\n\n` +
-              `<b>用法：</b><code>.weather &lt;城市名&gt;</code>\n\n` +
-              `<b>示例：</b>\n` +
-              `<code>.weather 北京</code>\n` +
-              `<code>.weather Shanghai</code>\n` +
-              `<code>.weather Tokyo</code>\n\n` +
-              `<b>支持中文/英文城市名</b>`
-            );
-            return;
-          }
-
-          let cityName = args.join(" ");
-          const originalInput = cityName;
-
-          // 检查快速映射
-          if (quickCityMap[cityName]) {
-            cityName = quickCityMap[cityName];
-          }
-
-          // 地理编码：获取城市坐标
-          const geoResponse = await axios.get<GeocodingResult>(
-            "https://geocoding-api.open-meteo.com/v1/search",
-            {
-              params: {
-                name: cityName,
-                count: 10,
-                language: "zh",
-                format: "json"
-              },
-              timeout: 10000
+          let cityName = args.trim() || "北京";
+          
+          // 显示查询中（至少显示1秒）
+          await (msg as any).edit({
+            text: `${EMOJI.LOADING} <b>正在查询天气...</b>\n\n${EMOJI.SEARCH} 正在定位: <b>${cityName}</b>\n<i>请稍候...</i>`,
+            parseMode: "html",
+          });
+          
+          await sleep(1000); // 确保能看到
+          
+          // 查找城市
+          let cityData = CITY_DATABASE[cityName];
+          if (!cityData) {
+            for (const [key, value] of Object.entries(CITY_DATABASE)) {
+              if (key.includes(cityName) || cityName.includes(key)) {
+                cityData = value;
+                break;
+              }
             }
-          );
-
-          if (!geoResponse.data.results || geoResponse.data.results.length === 0) {
-            await ctx.editHTML(
-              `${EMOJI.ERROR} <b>城市未找到</b>\n\n` +
-              `无法找到城市: <code>${htmlEscape(originalInput)}</code>\n\n` +
-              `<b>建议：</b>\n` +
-              `• 检查城市名拼写\n` +
-              `• 尝试使用英文名称\n` +
-              `• 尝试添加国家名，如: Beijing China`
-            );
-            return;
           }
-
-          // 选择第一个匹配结果
-          const location = geoResponse.data.results[0];
-
-          // 构建位置名称
-          const locationParts: string[] = [];
-          if (location.name && location.name !== "undefined") {
-            locationParts.push(location.name);
+          
+          // 如果没找到，尝试API
+          if (!cityData) {
+            await (msg as any).edit({
+              text: `${EMOJI.LOADING} <b>正在查询天气...</b>\n\n${EMOJI.SEARCH} 正在通过 API 查询 "${cityName}"...`,
+              parseMode: "html",
+            });
+            
+            try {
+              const geoResponse = await axios.get(
+                `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=zh&format=json`,
+                { timeout: 10000 }
+              );
+              
+              if (!geoResponse.data.results?.length) {
+                return (msg as any).edit({
+                  text: `${EMOJI.ERROR} <b>城市未找到</b>\n\n未找到 "${cityName}" 的位置信息。`,
+                  parseMode: "html",
+                });
+              }
+              
+              const geo = geoResponse.data.results[0];
+              cityData = {
+                lat: geo.latitude,
+                lon: geo.longitude,
+                name: geo.name,
+                country: geo.country || "",
+                admin1: geo.admin1 || ""
+              };
+            } catch {
+              return (msg as any).edit({
+                text: `${EMOJI.ERROR} <b>查询失败</b>\n\n获取位置信息失败。`,
+                parseMode: "html",
+              });
+            }
           }
-          if (location.admin1 && location.admin1 !== "undefined" && location.admin1 !== location.name) {
-            locationParts.push(location.admin1);
-          }
-          if (location.country && location.country !== "undefined") {
-            locationParts.push(location.country);
-          }
-          const locationName = locationParts.join(", ");
 
           // 获取天气数据
-          const weatherResponse = await axios.get<OpenMeteoResponse>(
-            "https://api.open-meteo.com/v1/forecast",
-            {
-              params: {
-                latitude: location.latitude,
-                longitude: location.longitude,
-                current: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,snowfall,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
-                daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,wind_speed_10m_max",
-                timezone: "auto",
-                forecast_days: 1
-              },
-              timeout: 10000
-            }
+          await (msg as any).edit({
+            text: `${EMOJI.LOADING} <b>正在查询天气...</b>\n\n${EMOJI.SUCCESS} 已定位: ${cityData.name}\n${EMOJI.LOADING} 正在获取气象数据...`,
+            parseMode: "html",
+          });
+          
+          const startTime = Date.now();
+          const response = await axios.get(
+            `https://api.open-meteo.com/v1/forecast?latitude=${cityData.lat}&longitude=${cityData.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,visibility&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`,
+            { timeout: 10000 }
           );
+          
+          // 确保 loading 至少显示1秒
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 1000) await sleep(1000 - elapsed);
 
-          const data = weatherResponse.data;
+          const current = response.data.current;
+          const daily = response.data.daily;
+          const weatherEmoji = getWeatherEmoji(current.weather_code, current.is_day);
+          const windDirs = ["北", "东北", "东", "东南", "南", "西南", "西", "西北"];
+          const windDir = windDirs[Math.round(current.wind_direction_10m / 45) % 8];
 
-          if (!data.current) {
-            await ctx.editHTML(`${EMOJI.ERROR} <b>无法获取天气数据</b>`);
-            return;
+          let text = `${weatherEmoji} <b>${cityData.name} 当前天气</b>\n`;
+          text += `├ ${EMOJI.THERMOMETER} 温度: <b>${Math.round(current.temperature_2m)}°C</b> (体感 ${Math.round(current.apparent_temperature)}°C)\n`;
+          text += `├ ${weatherEmoji} 天气: <b>${getWeatherDescription(current.weather_code)}</b>\n`;
+          text += `├ ${EMOJI.DROPLET} 湿度: ${current.relative_humidity_2m}%\n`;
+          text += `├ ${EMOJI.WIND} 风速: ${current.wind_speed_10m}km/h (${windDir}风)\n`;
+          text += `├ 🌡️ 气压: ${current.pressure_msl}hPa\n`;
+          text += `└ ${EMOJI.EYE} 能见度: ${(current.visibility / 1000).toFixed(1)}km\n\n`;
+
+          if (daily?.temperature_2m_max?.length > 0) {
+            const sunrise = daily.sunrise?.[0]?.split("T")[1] || "--:--";
+            const sunset = daily.sunset?.[0]?.split("T")[1] || "--:--";
+            text += `📅 <b>今日预报</b>\n`;
+            text += `├ 🌡️ 最高/最低: ${Math.round(daily.temperature_2m_max[0])}°C / ${Math.round(daily.temperature_2m_min[0])}°C\n`;
+            text += `├ ${EMOJI.SUNRISE} 日出: ${sunrise}\n`;
+            text += `└ ${EMOJI.SUNSET} 日落: ${sunset}\n\n`;
           }
 
-          // 构建天气报告
-          const current = data.current;
-          const weatherInfo = weatherCodeMap[current.weather_code] || { icon: "❓", description: "未知" };
-          
-          let report = `${weatherInfo.icon} <b>${htmlEscape(locationName)}</b>\n`;
-          report += `${weatherInfo.description} · ${EMOJI.TEMP} ${current.temperature_2m}°C\n\n`;
-          
-          report += `<b>详细数据：</b>\n`;
-          report += `${EMOJI.TEMP} 体感温度: ${current.apparent_temperature}°C\n`;
-          report += `${EMOJI.HUMIDITY} 湿度: ${current.relative_humidity_2m}%\n`;
-          report += `${EMOJI.WIND} 风速: ${current.wind_speed_10m} km/h (${calcWindDirection(current.wind_direction_10m)})\n`;
-          report += `${EMOJI.PRESSURE} 气压: ${current.pressure_msl} hPa\n`;
-          
-          if (data.daily) {
-            const daily = data.daily;
-            report += `\n<b>今日预报：</b>\n`;
-            report += `🔺 最高: ${daily.temperature_2m_max[0]}°C · 🔻 最低: ${daily.temperature_2m_min[0]}°C\n`;
-            if (daily.sunrise && daily.sunrise[0]) {
-              const sunrise = new Date(daily.sunrise[0]).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-              const sunset = new Date(daily.sunset[0]).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-              report += `${EMOJI.SUNRISE} 日出: ${sunrise} · ${EMOJI.SUNSET} 日落: ${sunset}`;
-            }
-          }
+          text += `📍 <i>${cityData.name}, ${cityData.admin1 || ""} ${cityData.country}</i>`;
 
-          await ctx.editHTML(report);
-
-        } catch (error: any) {
-          console.error("[weather] 插件执行失败:", error);
-          
-          if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
-            await ctx.reply(`${EMOJI.ERROR} 请求超时，请稍后重试`);
-            return;
-          }
-          
-          await ctx.editHTML(`${EMOJI.ERROR} <b>查询失败</b>\n\n${error.message || "未知错误"}`);
+          await (msg as any).edit({
+            text: text,
+            parseMode: "html",
+          });
+        } catch (err) {
+          console.error("[weather] 错误:", err);
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>天气查询失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`,
+            parseMode: "html",
+          });
         }
       },
     },

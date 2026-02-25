@@ -15,20 +15,21 @@ const EMOJI = {
   LOADING: "🔄",
   ERROR: "❌",
   SUCCESS: "✅",
-  CHART: "📊",
   FIRE: "🔥",
   SNAIL: "🐌",
   TURTLE: "🐢",
   RABBIT: "🐰",
   CHEETAH: "🐆",
-  SPEED: "⚡",
 };
+
+// 延迟函数
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 // 测速服务器列表
 const SPEED_TEST_URLS = [
-  { url: "https://speed.cloudflare.com/__down?bytes=25000000", size: 25, name: "Cloudflare" },  // 25MB
-  { url: "https://speed.hetzner.de/10MB.bin", size: 10, name: "Hetzner" },                    // 10MB
-  { url: "https://filesamples.com/samples/document/txt/sample1.txt", size: 0.001, name: "Backup" }, // 小文件备用
+  { url: "https://speed.cloudflare.com/__down?bytes=25000000", size: 25, name: "Cloudflare" },
+  { url: "https://speed.hetzner.de/10MB.bin", size: 10, name: "Hetzner" },
+  { url: "https://filesamples.com/samples/document/txt/sample1.txt", size: 0.001, name: "Backup" },
 ];
 
 // 测试下载速度
@@ -44,8 +45,8 @@ async function testDownloadSpeed(): Promise<{ speed: number; time: number; serve
       const endTime = Date.now();
 
       const bytes = response.data.byteLength;
-      const duration = (endTime - startTime) / 1000; // 秒
-      const speedMbps = (bytes * 8) / (duration * 1024 * 1024); // Mbps
+      const duration = (endTime - startTime) / 1000;
+      const speedMbps = (bytes * 8) / (duration * 1024 * 1024);
 
       return { 
         speed: Math.round(speedMbps * 100) / 100, 
@@ -75,9 +76,7 @@ async function testPing(): Promise<{ avg: number; results: number[] } | null> {
       await axios.head(url, { timeout: 5000 });
       const ping = Date.now() - start;
       results.push(ping);
-    } catch {
-      // 忽略错误
-    }
+    } catch {}
   }
 
   if (results.length === 0) return null;
@@ -86,21 +85,21 @@ async function testPing(): Promise<{ avg: number; results: number[] } | null> {
   return { avg, results };
 }
 
-// 获取速度评级和图标
-function getSpeedRating(speed: number): { icon: string; text: string; color: string } {
-  if (speed >= 100) return { icon: EMOJI.CHEETAH, text: "极速", color: "🟢" };
-  if (speed >= 50) return { icon: EMOJI.RABBIT, text: "很快", color: "🟢" };
-  if (speed >= 20) return { icon: EMOJI.FIRE, text: "良好", color: "🟡" };
-  if (speed >= 10) return { icon: EMOJI.TURTLE, text: "一般", color: "🟠" };
-  return { icon: EMOJI.SNAIL, text: "较慢", color: "🔴" };
+// 获取速度评级
+function getSpeedRating(speed: number): { icon: string; text: string } {
+  if (speed >= 100) return { icon: EMOJI.CHEETAH, text: "极速" };
+  if (speed >= 50) return { icon: EMOJI.RABBIT, text: "很快" };
+  if (speed >= 20) return { icon: EMOJI.FIRE, text: "良好" };
+  if (speed >= 10) return { icon: EMOJI.TURTLE, text: "一般" };
+  return { icon: EMOJI.SNAIL, text: "较慢" };
 }
 
 // 获取延迟评级
-function getPingRating(ping: number): { text: string; color: string } {
-  if (ping <= 50) return { text: "极佳", color: "🟢" };
-  if (ping <= 100) return { text: "良好", color: "🟡" };
-  if (ping <= 200) return { text: "一般", color: "🟠" };
-  return { text: "较差", color: "🔴" };
+function getPingRating(ping: number): { text: string } {
+  if (ping <= 50) return { text: "极佳" };
+  if (ping <= 100) return { text: "良好" };
+  if (ping <= 200) return { text: "一般" };
+  return { text: "较差" };
 }
 
 // 生成进度条
@@ -124,28 +123,43 @@ const speedtestPlugin: Plugin = {
 
       handler: async (msg, args, ctx) => {
         try {
-          // 测试延迟
+          // 第1步：显示正在测试延迟（确保显示至少1秒）
+          await (msg as any).edit({
+            text: `${EMOJI.ROCKET} <b>网速测试</b>\n\n${EMOJI.LOADING} <b>正在测试网络延迟...</b>\n${EMOJI.PING} 正在 ping Google / Cloudflare / Baidu`,
+            parseMode: "html",
+          });
+          
+          // 确保用户能看到 loading（至少1.5秒）
+          const pingStart = Date.now();
           const pingResult = await testPing();
+          const pingElapsed = Date.now() - pingStart;
+          if (pingElapsed < 1500) await sleep(1500 - pingElapsed);
 
-          // 测试下载速度
+          // 第2步：显示正在测试下载速度
+          await (msg as any).edit({
+            text: `${EMOJI.ROCKET} <b>网速测试</b>\n\n${EMOJI.SUCCESS} 延迟测试完成 ✓\n${EMOJI.LOADING} <b>正在测试下载速度...</b>\n${EMOJI.DOWNLOAD} 正在下载测试文件`,
+            parseMode: "html",
+          });
+          
+          // 确保用户能看到 loading（至少1.5秒）
+          const dlStart = Date.now();
           const downloadResult = await testDownloadSpeed();
+          const dlElapsed = Date.now() - dlStart;
+          if (dlElapsed < 1500) await sleep(1500 - dlElapsed);
 
-          // 构建美观的结果
+          // 第3步：显示最终结果
           let text = `${EMOJI.ROCKET} <b>网速测试结果</b>\n\n`;
           
-          // 延迟部分
           if (pingResult !== null) {
             const pingRating = getPingRating(pingResult.avg);
             const pingBar = generateBar(Math.max(300 - pingResult.avg, 0), 300, 8);
             text += `${EMOJI.PING} <b>网络延迟</b>\n`;
             text += `${pingBar} ${pingResult.avg}ms\n`;
-            text += `${pingRating.color} ${pingRating.text} · 平均: ${pingResult.avg}ms\n\n`;
+            text += `📊 ${pingRating.text} · 平均: ${pingResult.avg}ms\n\n`;
           } else {
-            text += `${EMOJI.PING} <b>网络延迟</b>\n`;
-            text += `${EMOJI.ERROR} 测试失败\n\n`;
+            text += `${EMOJI.PING} <b>网络延迟</b>\n测试失败\n\n`;
           }
 
-          // 下载速度部分
           if (downloadResult !== null) {
             const speedRating = getSpeedRating(downloadResult.speed);
             const speedBar = generateBar(downloadResult.speed, 200, 10);
@@ -153,10 +167,9 @@ const speedtestPlugin: Plugin = {
             text += `${EMOJI.DOWNLOAD} <b>下载速度</b>\n`;
             text += `${speedBar}\n`;
             text += `${speedRating.icon} ${downloadResult.speed} Mbps · ${speedRating.text}\n`;
-            text += `${EMOJI.TIME} 测试耗时: ${(Math.round(downloadResult.time * 100) / 100)}s\n`;
+            text += `⏱️ 测试耗时: ${(Math.round(downloadResult.time * 100) / 100)}s\n`;
             text += `📡 测速节点: ${downloadResult.server}\n\n`;
             
-            // 使用建议
             text += `<b>💡 使用建议:</b>\n`;
             if (downloadResult.speed >= 100) {
               text += `✓ 可流畅观看 4K 视频\n✓ 可进行大型游戏下载\n✓ 支持多设备同时高速上网`;
@@ -165,22 +178,26 @@ const speedtestPlugin: Plugin = {
             } else if (downloadResult.speed >= 20) {
               text += `✓ 可流畅观看 1080P 视频\n✓ 可进行视频通话\n✓ 日常使用无压力`;
             } else if (downloadResult.speed >= 10) {
-              text += `✓ 可观看 720P 视频\n△ 高清视频可能需要缓冲\n△ 大型文件下载较慢`;
+              text += `✓ 可观看 720P 视频\n△ 高清视频可能需要缓冲`;
             } else {
-              text += `△ 仅适合文字聊天和网页浏览\n△ 视频观看可能卡顿\n💡 建议检查网络连接`;
+              text += `△ 仅适合文字聊天和网页浏览\n💡 建议检查网络连接`;
             }
           } else {
-            text += `${EMOJI.DOWNLOAD} <b>下载速度</b>\n`;
-            text += `${EMOJI.ERROR} 测试失败\n`;
-            text += `请检查网络连接后重试`;
+            text += `${EMOJI.DOWNLOAD} <b>下载速度</b>\n测试失败\n请检查网络连接后重试`;
           }
 
-          text += `\n\n<i>⏰ 测试时间: ${new Date().toLocaleString("zh-CN")}</i>`;
+          text += `\n\n<i>⏰ ${new Date().toLocaleString("zh-CN")}</i>`;
 
-          await ctx.editHTML(text);
+          await (msg as any).edit({
+            text: text,
+            parseMode: "html",
+          });
         } catch (err) {
           console.error("[speedtest] 错误:", err);
-          await ctx.editHTML(`${EMOJI.ERROR} <b>测试失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`);
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>测试失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`,
+            parseMode: "html",
+          });
         }
       },
     },

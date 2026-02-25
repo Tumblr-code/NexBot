@@ -1,334 +1,275 @@
 /**
  * 系统管理插件
- * 功能：更新代码、升级依赖、重启Bot、查看状态/日志
  */
 
 import { Plugin } from "../src/types/index.js";
-import { fmt } from "../src/utils/context.js";
-import { exec } from "child_process";
+import { spawn, exec } from "child_process";
 import { promisify } from "util";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
+import { readFile } from "fs/promises";
+import { fileURLToPath } from "url";
+import path from "path";
 
 const execAsync = promisify(exec);
 
-// 应用Emoji
 const EMOJI = {
-  SYSTEM: "⚙️",
-  UPDATE: "📥",
-  UPGRADE: "⬆️",
-  RESTART: "🔄",
-  STATUS: "📊",
-  LOGS: "📋",
-  SUCCESS: "✅",
-  ERROR: "❌",
-  WARNING: "⚠️",
-  INFO: "ℹ️",
-  GIT: "🌿",
-  PACKAGE: "📦",
-  TIME: "⏱️",
-  SERVER: "🖥️",
-  LOADING: "🔄",
-  CHECK: "✓",
-  CROSS: "✗",
-  ARROW: "→",
+  UPDATE: "🔄", RESTART: "🔄", LOGS: "📋", INFO: "ℹ️",
+  ERROR: "❌", SUCCESS: "✅", WARNING: "⚠️", SHELL: "💻",
+  GEAR: "⚙️", CHECK: "✓", LOADING: "⏳",
+  BRANCH: "🌿", COMMIT: "🔖",
 };
 
-// 执行命令并返回输出
-async function runCommand(command: string, cwd: string = process.cwd()): Promise<{ success: boolean; stdout: string; stderr: string; error?: string }> {
-  try {
-    const { stdout, stderr } = await execAsync(command, { cwd, timeout: 60000 });
-    return { success: true, stdout: stdout.trim(), stderr: stderr.trim() };
-  } catch (error: any) {
-    return { 
-      success: false, 
-      stdout: error.stdout?.trim() || "", 
-      stderr: error.stderr?.trim() || "",
-      error: error.message 
-    };
-  }
-}
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-// 截断文本
-function truncate(text: string, maxLength: number = 4000): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + "\n... (内容已截断)";
-}
-
-// 获取系统状态
-async function getSystemStatus(): Promise<string> {
-  const lines: string[] = [];
-  
-  // Git 状态
-  const gitStatus = await runCommand("git status --short");
-  const gitBranch = await runCommand("git branch --show-current");
-  const gitCommit = await runCommand("git log -1 --format='%h %s'");
-  
-  lines.push(`${EMOJI.GIT} <b>Git 状态</b>`);
-  lines.push(`分支: ${gitBranch.success ? gitBranch.stdout : "未知"}`);
-  lines.push(`提交: ${gitCommit.success ? gitCommit.stdout : "未知"}`);
-  if (gitStatus.stdout) {
-    lines.push(`${EMOJI.WARNING} 有未提交的更改`);
-  } else {
-    lines.push(`${EMOJI.SUCCESS} 工作区干净`);
-  }
-  lines.push("");
-  
-  // 版本信息
+async function getGitInfo(): Promise<{ branch: string; commit: string }> {
   try {
-    const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf-8"));
-    lines.push(`${EMOJI.PACKAGE} <b>版本信息</b>`);
-    lines.push(`NexBot: v${packageJson.version || "未知"}`);
-    lines.push(`Node: ${process.version}`);
-    lines.push(`平台: ${process.platform} ${process.arch}`);
-    lines.push("");
+    const { stdout: branch } = await execAsync("git branch --show-current");
+    const { stdout: commit } = await execAsync("git rev-parse --short HEAD");
+    return { branch: branch.trim(), commit: commit.trim() };
   } catch {
-    // 忽略错误
+    return { branch: "unknown", commit: "unknown" };
   }
-  
-  // 运行状态
-  const uptime = formatUptime(process.uptime());
-  const memoryUsage = process.memoryUsage();
-  const memoryMB = Math.round(memoryUsage.rss / 1024 / 1024);
-  
-  lines.push(`${EMOJI.SERVER} <b>运行状态</b>`);
-  lines.push(`运行时间: ${uptime}`);
-  lines.push(`内存使用: ${memoryMB} MB`);
-  lines.push(`进程 PID: ${process.pid}`);
-  
-  return lines.join("\n");
-}
-
-// 格式化运行时间
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-  
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}天`);
-  if (hours > 0) parts.push(`${hours}小时`);
-  if (minutes > 0) parts.push(`${minutes}分钟`);
-  if (secs > 0) parts.push(`${secs}秒`);
-  
-  return parts.join("") || "0秒";
 }
 
 const systemPlugin: Plugin = {
   name: "system",
   version: "1.0.0",
-  description: "系统管理（更新/升级/重启/状态/日志）",
+  description: "系统管理命令",
   author: "NexBot",
 
   commands: {
-    // 更新代码
     update: {
-      description: "从GitHub拉取最新代码",
-      aliases: ["pull", "gitpull"],
+      description: "从GitHub更新代码",
+      aliases: ["up"],
       examples: ["update"],
+
       handler: async (msg, args, ctx) => {
-        // 先检查Git状态
-        const checkResult = await runCommand("git status");
-        if (!checkResult.success) {
-          await ctx.editHTML(`${EMOJI.ERROR} <b>Git检查失败</b>\n\n${checkResult.error || checkResult.stderr}`);
-          return;
+        try {
+          await (msg as any).edit({
+            text: `${EMOJI.UPDATE} <b>正在更新...</b>\n\n${EMOJI.LOADING} 正在检查远程分支...`,
+            parseMode: "html",
+          });
+          
+          await sleep(800);
+
+          const gitInfo = await getGitInfo();
+          
+          await (msg as any).edit({
+            text: `${EMOJI.UPDATE} <b>正在更新...</b>\n\n${EMOJI.BRANCH} 分支: ${gitInfo.branch}\n${EMOJI.COMMIT} 版本: ${gitInfo.commit}\n${EMOJI.LOADING} 正在拉取代码...`,
+            parseMode: "html",
+          });
+
+          const { stdout, stderr } = await execAsync("git pull origin main");
+          const output = stdout + (stderr ? "\n" + stderr : "");
+
+          if (output.includes("Already up to date") || output.includes("已经是最新")) {
+            await (msg as any).edit({
+              text: `${EMOJI.SUCCESS} <b>无需更新</b>\n\n${EMOJI.CHECK} 当前已是最新\n${EMOJI.BRANCH} ${gitInfo.branch} / ${gitInfo.commit}`,
+              parseMode: "html",
+            });
+          } else if (output.includes("error") || output.includes("fatal")) {
+            await (msg as any).edit({
+              text: `${EMOJI.ERROR} <b>更新失败</b>\n\n<pre>${output.slice(0, 1000)}</pre>`,
+              parseMode: "html",
+            });
+          } else {
+            await (msg as any).edit({
+              text: `${EMOJI.SUCCESS} <b>更新成功</b>\n\n${EMOJI.CHECK} 代码已更新，请使用 .restart 重启\n\n<pre>${output.slice(0, 800)}</pre>`,
+              parseMode: "html",
+            });
+          }
+        } catch (err) {
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>更新失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`,
+            parseMode: "html",
+          });
         }
-        
-        // 获取当前分支
-        const branchResult = await runCommand("git branch --show-current");
-        const branch = branchResult.success ? branchResult.stdout : "main";
-        
-        // 获取远程更新
-        const fetchResult = await runCommand("git fetch origin");
-        if (!fetchResult.success) {
-          await ctx.editHTML(`${EMOJI.ERROR} <b>获取远程更新失败</b>\n\n${fetchResult.error || fetchResult.stderr}`);
-          return;
-        }
-        
-        // 检查是否有更新
-        const logResult = await runCommand(`git log HEAD..origin/${branch} --oneline`);
-        if (!logResult.stdout) {
-          await ctx.editHTML(`${EMOJI.INFO} <b>当前已经是最新版本</b>\n\n无需更新`);
-          return;
-        }
-        
-        // 显示即将更新的内容并执行更新
-        const commits = logResult.stdout.split("\n").slice(0, 10);
-        let updateText = `${EMOJI.UPDATE} <b>发现新版本</b>\n\n`;
-        updateText += `<b>更新内容 (${commits.length} 个提交):</b>\n`;
-        commits.forEach((commit, i) => {
-          updateText += `${i + 1}. ${commit}\n`;
-        });
-        if (logResult.stdout.split("\n").length > 10) {
-          updateText += `... 还有 ${logResult.stdout.split("\n").length - 10} 个提交\n`;
-        }
-        
-        // 执行更新
-        const pullResult = await runCommand(`git pull origin ${branch}`);
-        if (!pullResult.success) {
-          await ctx.editHTML(`${EMOJI.ERROR} <b>更新失败</b>\n\n${pullResult.error || pullResult.stderr}`);
-          return;
-        }
-        
-        await ctx.editHTML(
-          `${EMOJI.SUCCESS} <b>更新成功!</b>\n\n` +
-          `${EMOJI.RESTART} 请使用 <code>.restart</code> 命令重启Bot以应用更新`
-        );
       },
     },
 
-    // 升级依赖
     upgrade: {
-      description: "升级项目依赖",
-      aliases: ["upgradedeps", "buninstall"],
+      description: "升级依赖",
+      aliases: ["upg"],
       examples: ["upgrade"],
+
       handler: async (msg, args, ctx) => {
-        const result = await runCommand("bun install");
-        
-        if (!result.success) {
-          await ctx.editHTML(`${EMOJI.ERROR} <b>升级失败</b>\n\n${result.error || result.stderr}`);
-          return;
+        try {
+          await (msg as any).edit({
+            text: `${EMOJI.GEAR} <b>正在升级依赖...</b>\n\n${EMOJI.LOADING} 正在执行 bun install...`,
+            parseMode: "html",
+          });
+          
+          await sleep(800);
+
+          const { stdout, stderr } = await execAsync("bun install");
+          const output = stdout + (stderr ? "\n" + stderr : "");
+
+          await (msg as any).edit({
+            text: `${EMOJI.SUCCESS} <b>依赖升级完成</b>\n\n${EMOJI.CHECK} 请使用 .restart 重启生效\n\n<pre>${output.slice(0, 1000)}</pre>`,
+            parseMode: "html",
+          });
+        } catch (err) {
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>升级失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`,
+            parseMode: "html",
+          });
         }
-        
-        const output = result.stdout || "依赖已是最新";
-        await ctx.editHTML(
-          `${EMOJI.SUCCESS} <b>依赖升级完成!</b>\n\n` +
-          `<pre>${truncate(output, 2000)}</pre>\n\n` +
-          `${EMOJI.RESTART} 如果有重大更新，建议重启Bot`
-        );
       },
     },
 
-    // 重启Bot
     restart: {
-      description: "重启Bot",
-      aliases: ["reboot", "reloadbot"],
+      description: "重启机器人",
+      aliases: ["reboot"],
       examples: ["restart"],
+
       handler: async (msg, args, ctx) => {
-        await ctx.replyHTML(
-          `${EMOJI.RESTART} <b>正在重启Bot...</b>\n\n` +
-          `⏱️ 预计需要 5-10 秒`
-        );
-        
-        // 延迟重启，确保消息发送完成
+        await (msg as any).edit({
+          text: `${EMOJI.RESTART} <b>正在重启...</b>\n\n${EMOJI.LOADING} 正在准备重启\n⏱️ 预计需要 5-10 秒`,
+          parseMode: "html",
+        });
+
         setTimeout(() => {
-          // 使用 exec 启动新进程后退出当前进程
-          const { spawn } = require("child_process");
-          
-          // 创建一个脚本来重启
-          const restartScript = `
-            sleep 2
-            cd ${process.cwd()}
-            pkill -f "bun run src/index.ts" 2>/dev/null || true
-            sleep 1
-            nohup bun start > logs/bot.log 2>&1 &
-          `;
-          
-          spawn("bash", ["-c", restartScript], {
+          const child = spawn("bun", ["run", "start"], {
             detached: true,
-            stdio: "ignore",
-          }).unref();
-          
-          // 退出当前进程
+            stdio: "inherit",
+          });
+          child.unref();
           process.exit(0);
-        }, 1000);
+        }, 1500);
       },
     },
 
-    // 系统状态
     status: {
       description: "查看系统状态",
-      aliases: ["sysstatus", "botstatus"],
+      aliases: ["stat"],
       examples: ["status"],
+
       handler: async (msg, args, ctx) => {
-        const status = await getSystemStatus();
-        await ctx.editHTML(`${EMOJI.STATUS} <b>系统状态</b>\n\n${status}`);
+        try {
+          await (msg as any).edit({
+            text: `${EMOJI.INFO} <b>正在获取系统状态...</b>\n\n${EMOJI.LOADING} 正在收集信息...`,
+            parseMode: "html",
+          });
+          
+          await sleep(800);
+
+          const gitInfo = await getGitInfo();
+          const uptime = process.uptime();
+          const uptimeStr = `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`;
+
+          let text = `${EMOJI.INFO} <b>系统状态</b>\n\n`;
+          text += `<b>运行信息</b>\n`;
+          text += `├ ⏱️ 运行时间: ${uptimeStr}\n`;
+          text += `├ 📦 Node.js: ${process.version}\n`;
+          text += `└ 💾 内存: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB\n\n`;
+          text += `<b>版本信息</b>\n`;
+          text += `├ ${EMOJI.BRANCH} 分支: ${gitInfo.branch}\n`;
+          text += `└ ${EMOJI.COMMIT} Commit: ${gitInfo.commit}`;
+
+          await (msg as any).edit({
+            text: text,
+            parseMode: "html",
+          });
+        } catch (err) {
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>获取失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`,
+            parseMode: "html",
+          });
+        }
       },
     },
 
-    // 查看日志
     logs: {
-      description: "查看Bot日志",
-      aliases: ["log", "logfile"],
-      examples: ["logs", "logs 50"],
-      handler: async (msg, args, ctx) => {
-        const lines = parseInt(args[0]) || 30;
-        const maxLines = Math.min(Math.max(lines, 10), 100); // 限制 10-100 行
-        
-        const logPath = join(process.cwd(), "logs", "bot.log");
-        
-        if (!existsSync(logPath)) {
-          await ctx.editHTML(`${EMOJI.ERROR} <b>日志文件不存在</b>`);
-          return;
-        }
-        
-        const result = await runCommand(`tail -n ${maxLines} "${logPath}"`);
-        
-        if (!result.success) {
-          await ctx.editHTML(`${EMOJI.ERROR} <b>读取日志失败</b>\n\n${result.error}`);
-          return;
-        }
-        
-        const logContent = result.stdout || "(日志为空)";
-        await ctx.editHTML(
-          `${EMOJI.LOGS} <b>最近 ${maxLines} 行日志</b>\n\n` +
-          `<pre>${truncate(logContent, 3500)}</pre>`
-        );
-      },
-    },
+      description: "查看最近日志",
+      aliases: ["log"],
+      examples: ["logs 50"],
 
-    // 执行系统命令（谨慎使用）
-    sys: {
-      description: "执行系统命令（谨慎使用）",
-      aliases: ["syscmd", "shell"],
-      examples: ["sys ps aux", "sys df -h"],
       handler: async (msg, args, ctx) => {
-        if (args.length === 0) {
-          await ctx.editHTML(`${EMOJI.INFO} <b>用法</b>: <code>.sys &lt;命令&gt;</code>\n\n示例: <code>.sys ps aux</code>`);
-          return;
-        }
-        
-        const command = args.join(" ");
-        
-        // 危险命令检查
-        const dangerousCommands = [
-          "rm -rf /",
-          "rm -rf /*",
-          "> /dev/sda",
-          "mkfs",
-          "dd if=/dev/zero",
-          ":(){ :|:& };:",
-          "shutdown",
-          "reboot",
-          "halt",
-          "poweroff",
-        ];
-        
-        for (const dangerous of dangerousCommands) {
-          if (command.includes(dangerous)) {
-            await ctx.editHTML(`${EMOJI.ERROR} <b>检测到危险命令</b>\n\n已阻止执行: <code>${command}</code>`);
+        try {
+          const lines = parseInt(args.trim()) || 30;
+          const validLines = Math.min(Math.max(lines, 10), 100);
+
+          await (msg as any).edit({
+            text: `${EMOJI.LOGS} <b>正在获取日志...</b>\n\n${EMOJI.LOADING} 正在读取...`,
+            parseMode: "html",
+          });
+          
+          await sleep(500);
+
+          const __filename = fileURLToPath(import.meta.url);
+          const __dirname = path.dirname(__filename);
+          const logPath = path.join(__dirname, "..", "logs", "bot.log");
+
+          let logContent: string;
+          try {
+            logContent = await readFile(logPath, "utf-8");
+          } catch {
+            await (msg as any).edit({
+              text: `${EMOJI.ERROR} <b>日志文件不存在</b>`,
+              parseMode: "html",
+            });
             return;
           }
+
+          const recentLines = logContent.split("\n").slice(-validLines).join("\n");
+
+          await (msg as any).edit({
+            text: `${EMOJI.LOGS} <b>最近 ${validLines} 行日志</b>\n\n<pre>${recentLines.slice(0, 3500)}</pre>`,
+            parseMode: "html",
+          });
+        } catch (err) {
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>读取失败</b>\n\n${err instanceof Error ? err.message : "未知错误"}`,
+            parseMode: "html",
+          });
         }
-        
-        const result = await runCommand(command);
-        
-        let output = result.stdout;
-        if (result.stderr) {
-          output += "\n\nstderr:\n" + result.stderr;
+      },
+    },
+
+    sys: {
+      description: "执行shell命令",
+      aliases: ["exec", "shell"],
+      examples: ["sys ls -la"],
+
+      handler: async (msg, args, ctx) => {
+        try {
+          if (!args.trim()) {
+            return (msg as any).edit({
+              text: `${EMOJI.ERROR} <b>命令为空</b>\n\n用法: .sys <命令>`,
+              parseMode: "html",
+            });
+          }
+
+          // 检查危险命令
+          const dangerous = ["rm -rf /", "rm -rf /*", "mkfs", "dd if=/dev/zero", "> /dev/sda", "shutdown", "reboot", "poweroff", "halt", "chmod -R 777 /"];
+          if (dangerous.some(cmd => args.toLowerCase().includes(cmd))) {
+            return (msg as any).edit({
+              text: `${EMOJI.WARNING} <b>危险命令已阻止</b>`,
+              parseMode: "html",
+            });
+          }
+
+          await (msg as any).edit({
+            text: `${EMOJI.SHELL} <b>正在执行命令...</b>\n\n${EMOJI.GEAR} <code>${args.slice(0, 100)}</code>\n${EMOJI.LOADING} 请稍候...`,
+            parseMode: "html",
+          });
+          
+          await sleep(500);
+
+          const { stdout, stderr } = await execAsync(args, { timeout: 60000 });
+          const output = stdout || stderr || "(无输出)";
+          const truncated = output.length > 3500 ? output.slice(0, 3500) + "\n..." : output;
+
+          await (msg as any).edit({
+            text: `${EMOJI.SHELL} <b>命令执行结果</b>\n\n<code>${args.slice(0, 100)}</code>\n\n<pre>${truncated}</pre>`,
+            parseMode: "html",
+          });
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : "未知错误";
+          await (msg as any).edit({
+            text: `${EMOJI.ERROR} <b>执行失败</b>\n\n<code>${args.slice(0, 100)}</code>\n\n<pre>${errorMsg.slice(0, 1000)}</pre>`,
+            parseMode: "html",
+          });
         }
-        
-        if (!output) {
-          output = "(无输出)";
-        }
-        
-        const status = result.success ? EMOJI.SUCCESS : EMOJI.ERROR;
-        const statusText = result.success ? "成功" : "失败";
-        await ctx.editHTML(
-          `${status} <b>执行${statusText}</b>  ${fmt.code(command)}\n\n` +
-          `<pre>${truncate(output, 3500)}</pre>`
-        );
       },
     },
   },
