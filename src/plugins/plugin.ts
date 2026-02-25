@@ -77,9 +77,9 @@ const pluginPlugin: Plugin = {
               let availableText = "";
               for (const plugin of notInstalled) {
                 const installCmd = prefix + "plugin install " + plugin.name;
-                const shortDesc = plugin.description.split("\n")[0].slice(0, 35);
-                // 插件名称可点击复制安装命令
-                availableText += `• <a href="tg://copy?text=${encodeURIComponent(installCmd)}">${fmt.code(plugin.name)}</a> — ${shortDesc}${plugin.description.length > 35 ? ".." : ""}\n`;
+                // 插件名称可点击复制安装命令，显示完整描述
+                const fullDesc = plugin.description.split("\n")[0];
+                availableText += `• <a href="tg://copy?text=${encodeURIComponent(installCmd)}">${fmt.code(plugin.name)}</a> — ${fullDesc}\n`;
               }
               
               text += `<blockquote expandable>${availableText.trim()}</blockquote>\n\n`;
