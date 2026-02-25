@@ -70,50 +70,32 @@ const pluginPlugin: Plugin = {
             let text = fmt.bold("🔌 插件中心") + "\n";
             text += `可用: ${availablePlugins.length}个 | 已装: ${externalInstalled.length}个\n\n`;
             
-            // 1. 可安装插件
+            // 1. 可安装插件（只显示名称和描述，带折叠）
             if (notInstalled.length > 0) {
               text += fmt.bold("📥 可安装插件") + "\n";
               
-              for (let i = 0; i < Math.min(notInstalled.length, 5); i++) {
-                const plugin = notInstalled[i];
-                const installCmd = prefix + "plugin install " + plugin.name;
-                
-                // 插件名称行
-                text += `\n${i + 1}. ${fmt.bold(plugin.name)}\n`;
-                
-                // 描述（多行显示，不截断）
-                const descLines = plugin.description.split("\n")[0].slice(0, 50);
-                text += `   描述: ${descLines}${plugin.description.length > 50 ? ".." : ""}\n`;
-                
-                // 命令
-                if (plugin.commands.length > 0) {
-                  text += `   命令: ${plugin.commands.join(" ")}\n`;
-                }
-                
-                // 作者和版本
-                text += `   作者: ${plugin.author} | v${plugin.version}\n`;
-                
-                // 安装按钮
-                text += `   <a href="tg://copy?text=${encodeURIComponent(installCmd)}">[点击安装]</a>\n`;
+              let availableText = "";
+              for (const plugin of notInstalled) {
+                // 插件名称 + 描述（简洁）
+                const shortDesc = plugin.description.split("\n")[0].slice(0, 40);
+                availableText += `• ${plugin.name} — ${shortDesc}${plugin.description.length > 40 ? ".." : ""}\n`;
               }
               
-              if (notInstalled.length > 5) {
-                text += `\n...还有 ${notInstalled.length - 5} 个插件\n`;
-              }
-              
-              text += "\n";
+              text += `<blockquote expandable>${availableText.trim()}</blockquote>\n\n`;
             }
             
-            // 2. 已安装插件
+            // 2. 已安装插件（带折叠）
             if (externalInstalled.length > 0) {
-              text += fmt.bold("✅ 已安装插件") + "\n\n";
+              text += fmt.bold("✅ 已安装插件") + "\n";
               
+              let installedText = "";
               for (const plugin of externalInstalled) {
                 const cmds = getPluginCmds(plugin);
                 const cmdStr = cmds.length > 0 ? cmds.join(" ") : "无";
-                text += `• ${plugin.name}\n`;
-                text += `  命令: ${cmdStr}\n\n`;
+                installedText += `• ${plugin.name} — ${cmdStr}\n`;
               }
+              
+              text += `<blockquote expandable>${installedText.trim()}</blockquote>\n\n`;
             }
             
             text += `💡 发送 ${prefix}plugin install <名称> 安装插件`;
