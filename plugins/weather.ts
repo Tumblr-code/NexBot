@@ -152,7 +152,7 @@ const weatherPlugin: Plugin = {
     weather: {
       description: "获取天气 (图片海报)",
       aliases: ["wt", "tq", "天气"],
-      examples: [".weather 北京", ".tq 上海"]
+      examples: [".weather 北京", ".tq 上海"],
 
       handler: async (msg: any, args, ctx) => {
         try {
