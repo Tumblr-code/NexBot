@@ -6,6 +6,7 @@ import { pluginManager } from "../core/pluginManager.js";
 import { healthChecker } from "../utils/healthCheck.js";
 import { defaultCache } from "../utils/cache.js";
 import { defaultRateLimiter } from "../utils/rateLimiter.js";
+import { VERSION } from "../utils/version.js";
 
 const sysinfoPlugin: Plugin = {
   name: "sysinfo",

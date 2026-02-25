@@ -1,6 +1,7 @@
 import { Plugin } from "../types/index.js";
 import { pluginManager } from "../core/pluginManager.js";
 import { fmt } from "../utils/context.js";
+import { VERSION } from "../utils/version.js";
 
 const helpPlugin: Plugin = {
   name: "help",
@@ -74,10 +75,9 @@ const helpPlugin: Plugin = {
         } else {
           // 显示主帮助 - 简约风格
           const botName = process.env.BOT_NAME || "NexBot";
-          const botVersion = process.env.BOT_VERSION || "1.0.1";
           const copyCmd = (cmd: string, desc: string) => `<a href="tg://copy?text=${encodeURIComponent(prefix + cmd)}">${fmt.code(prefix + cmd)}</a> — ${desc}`;
           
-          let text = fmt.bold(`🤖 ${botName}`) + ` ${fmt.italic("v" + botVersion)}\n\n`;
+          let text = fmt.bold(`🤖 ${botName}`) + ` ${fmt.italic("v" + VERSION)}\n\n`;
           
           // 简约介绍
           text += "⚡ 极速 · 🔌 插件化 · 🛡️ 安全\n";
