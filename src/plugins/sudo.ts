@@ -38,13 +38,21 @@ const sudoPlugin: Plugin = {
               }
             }
 
-            // 尝试从回复获取
+            // 修复：改进从回复获取用户ID的逻辑，添加空值检查
             if (!userId && msg.replyTo) {
-              const replyMsg = await ctx.client.getMessages(msg.chatId!, {
-                ids: msg.replyTo.replyToMsgId,
-              });
-              if (replyMsg.length > 0) {
-                userId = parseInt(replyMsg[0].senderId?.toString() || "0");
+              try {
+                const replyToMsgId = (msg.replyTo as any)?.replyToMsgId || (msg.replyTo as any)?.replyToTopId;
+                if (replyToMsgId && msg.chatId) {
+                  const replyMsg = await ctx.client.getMessages(msg.chatId, { ids: replyToMsgId });
+                  if (replyMsg && replyMsg.length > 0) {
+                    const replySenderId = (replyMsg[0] as any).senderId || (replyMsg[0] as any).fromId;
+                    if (replySenderId) {
+                      userId = parseInt(replySenderId.toString());
+                    }
+                  }
+                }
+              } catch (e) {
+                // 获取回复消息失败，继续
               }
             }
 

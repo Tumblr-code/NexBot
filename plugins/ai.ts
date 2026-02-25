@@ -648,10 +648,13 @@ const footer = (model?: string, extra?: string) => {
   const quote = dailyQuotes[Math.floor(Math.random() * dailyQuotes.length)];
   return "\n\n<i>💭 每日一言：" + quote + "</i>";
 };
+
+// 修复：ensureDir 函数应该独立定义，不应嵌套在 footer 函数内部
 const ensureDir = () => {
   if (!fs.existsSync(Store.baseDir)) fs.mkdirSync(Store.baseDir, { recursive: true });
-/* ---------- 上下文隔离（用户+会话） ---------- */
 };
+
+/* ---------- 上下文隔离（用户+会话） ---------- */
 const contextKey = (msg: Api.Message): string => {
   const chatId = String((msg.peerId as any)?.channelId || (msg.peerId as any)?.userId || (msg.peerId as any)?.chatId || "global");
   const userId = String((msg as any).senderId || (msg as any).fromId?.userId || "unknown");
@@ -2010,12 +2013,7 @@ class AiPlugin extends Plugin {
           return;
         }
 
-        /* ---------- 配置管理 ---------- */
-        if (subn === "config") {
-          if (isGroupOrChannel(msg)) {
-            await msg.edit({ text: "❌ 为保护用户隐私，禁止在公共对话环境使用ai config所有子命令", parseMode: "html" });
-            return;
-        }        /* ---------- 统计 ---------- */
+        /* ---------- 统计 ---------- */
         if (subn === "stats" || subn === "stat") {
           const sub = args[1]?.toLowerCase();
           if (sub === "reset" || sub === "clear") {
@@ -2026,6 +2024,13 @@ class AiPlugin extends Plugin {
           }
           return;
         }
+
+        /* ---------- 配置管理 ---------- */
+        if (subn === "config") {
+          if (isGroupOrChannel(msg)) {
+            await msg.edit({ text: "❌ 为保护用户隐私，禁止在公共对话环境使用ai config所有子命令", parseMode: "html" });
+            return;
+          }
           const a0 = (args[0] || "").toLowerCase();
           if (a0 === "status") {
             const cur = Store.data.models;

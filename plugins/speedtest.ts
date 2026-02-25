@@ -72,16 +72,31 @@ const speedtestPlugin: Plugin = {
       sudo: true,
       handler: async (msg, args, ctx) => {
         try {
+          // 修复：添加空值检查，确保 chatId 存在
+          const chatId = msg.chatId;
+          if (!chatId) {
+            await ctx.reply("❌ 无法获取聊天 ID");
+            return;
+          }
+
+          // 修复：正确处理 msg.id 可能是 BigInt 的情况
+          const replyToId = typeof msg.id === "bigint" ? Number(msg.id) : msg.id;
+
           // 发送初始消息
-          const status = await ctx.client.sendMessage(msg.chatId!, {
+          const status = await ctx.client.sendMessage(chatId, {
             message: "🔄 正在测试网速，请稍候...",
-            replyTo: Number(msg.id),
+            replyTo: replyToId,
           });
 
-          const statusId = Number(status.id);
+          // 修复：检查 status.id 是否存在
+          const statusId = status.id ? Number(status.id) : undefined;
+          if (!statusId) {
+            await ctx.reply("❌ 发送状态消息失败");
+            return;
+          }
 
           // 测试延迟
-          await ctx.client.editMessage(msg.chatId!, {
+          await ctx.client.editMessage(chatId, {
             message: statusId,
             text: "🔄 正在测试网速，请稍候...\n📶 正在测试延迟...",
           });
@@ -89,7 +104,7 @@ const speedtestPlugin: Plugin = {
           const ping = await testPing();
 
           // 测试下载速度
-          await ctx.client.editMessage(msg.chatId!, {
+          await ctx.client.editMessage(chatId, {
             message: statusId,
             text: "🔄 正在测试网速，请稍候...\n📶 正在测试延迟...\n⬇️ 正在测试下载速度...",
           });
@@ -100,28 +115,28 @@ const speedtestPlugin: Plugin = {
           let text = "<b>🚀 网速测试结果</b>\n\n";
 
           if (ping !== null) {
-            text += `📶 延迟: ${ping} ms\n`;
+            text += "📶 延迟: " + ping + " ms\n";
           } else {
-            text += `📶 延迟: 测试失败\n`;
+            text += "📶 延迟: 测试失败\n";
           }
 
           if (downloadResult !== null) {
-            text += `⬇️ 下载: ${downloadResult.speed} Mbps\n`;
-            text += `⏱️ 耗时: ${Math.round(downloadResult.time * 100) / 100}s\n`;
+            text += "⬇️ 下载: " + downloadResult.speed + " Mbps\n";
+            text += "⏱️ 耗时: " + (Math.round(downloadResult.time * 100) / 100) + "s\n";
           } else {
-            text += `⬇️ 下载: 测试失败\n`;
+            text += "⬇️ 下载: 测试失败\n";
           }
 
-          text += `\n<i>测试时间: ${new Date().toLocaleString()}</i>`;
+          text += "\n<i>测试时间: " + new Date().toLocaleString() + "</i>";
 
-          await ctx.client.editMessage(msg.chatId!, {
+          await ctx.client.editMessage(chatId, {
             message: statusId,
             text,
             parseMode: "html",
           });
         } catch (err) {
           console.error("[speedtest] 错误:", err);
-          await ctx.reply(`❌ 测试失败: ${err instanceof Error ? err.message : "未知错误"}`);
+          await ctx.reply("❌ 测试失败: " + (err instanceof Error ? err.message : "未知错误"));
         }
       },
     },
