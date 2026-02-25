@@ -84,11 +84,26 @@ class ClientManager {
   }
 
   private askQuestion(question: string): Promise<string> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       process.stdout.write(question);
-      process.stdin.once("data", (data) => {
+      
+      const onData = (data: Buffer) => {
+        cleanup();
         resolve(data.toString().trim());
-      });
+      };
+      
+      const onError = (err: Error) => {
+        cleanup();
+        reject(err);
+      };
+      
+      const cleanup = () => {
+        process.stdin.removeListener("data", onData);
+        process.stdin.removeListener("error", onError);
+      };
+      
+      process.stdin.once("data", onData);
+      process.stdin.once("error", onError);
     });
   }
 

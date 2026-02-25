@@ -82,9 +82,27 @@ class RateLimiter {
       };
     }
 
-    // 更新请求记录
+    // 更新请求记录（只在真正允许请求时增加计数）
+    // 注意：entry.count 已经在上面检查前被使用过，
+    // 我们需要在返回之前增加，确保下次检查时能看到最新的计数
     entry.count++;
     entry.lastRequest = now;
+    
+    // 再次检查是否超过限制（刚增加的计数可能正好超过限制）
+    if (entry.count > this.config.maxRequests) {
+      // 封禁
+      const blockUntil = now + (this.config.blockDuration || 300000);
+      this.blocked.set(key, blockUntil);
+      this.requests.delete(key);
+      
+      logger.warn(`限流: ${key} 被封禁 ${this.config.blockDuration || 300000}ms`);
+      
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: blockUntil,
+      };
+    }
 
     return {
       allowed: true,

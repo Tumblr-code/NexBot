@@ -41,7 +41,14 @@ export function createContext(
     },
 
     async replyHTML(html: string, options: ReplyOptions = {}): Promise<Api.Message> {
-      return await this.reply(html, { ...options, parseMode: "html" });
+      const target = chat || chatId;
+      return await client.sendMessage(target, {
+        message: html,
+        replyTo: options.replyToMessageId ? Number(options.replyToMessageId) : Number(messageId),
+        parseMode: "html",
+        silent: options.silent,
+        linkPreview: options.disableWebPagePreview === false,
+      });
     },
 
     async deleteMessage(): Promise<void> {

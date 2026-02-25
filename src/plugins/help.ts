@@ -68,7 +68,7 @@ const helpPlugin: Plugin = {
           
           // 构建最终消息
           let text = fmt.bold("📖 命令帮助: " + cmdName) + "\n\n";
-          text += `<blockquote expandable>${detailText.trim()}</blockquote>`;
+          text += `<blockquote>${detailText.trim()}</blockquote>`;
 
           await ctx.replyHTML(text);
         } else {
@@ -106,7 +106,7 @@ const helpPlugin: Plugin = {
           commandsText += "  plugin list - 插件列表";
           
           text += fmt.bold("📌 常用命令") + "\n";
-          text += `<blockquote expandable>${commandsText}</blockquote>`;
+          text += `<blockquote>${commandsText}</blockquote>`;
           
           await ctx.replyHTML(text);
         }

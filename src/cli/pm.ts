@@ -4,7 +4,7 @@
  * 用于管理插件的命令行工具
  */
 import "dotenv/config";
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, unlinkSync } from "fs";
 import { join } from "path";
 
 const PLUGINS_DIR = process.env.PLUGINS_DIR || "./plugins";
@@ -176,7 +176,7 @@ function listPlugins(): void {
     return;
   }
 
-  const files = require("fs").readdirSync(PLUGINS_DIR)
+  const files = readdirSync(PLUGINS_DIR)
     .filter((f: string) => f.endsWith(".ts") || f.endsWith(".js"));
 
   if (files.length === 0) {
@@ -200,10 +200,10 @@ function removePlugin(name: string): void {
   const jsPath = join(PLUGINS_DIR, `${name}.js`);
 
   if (existsSync(pluginPath)) {
-    require("fs").unlinkSync(pluginPath);
+    unlinkSync(pluginPath);
     console.log(`✅ 插件 ${name} 已移除`);
   } else if (existsSync(jsPath)) {
-    require("fs").unlinkSync(jsPath);
+    unlinkSync(jsPath);
     console.log(`✅ 插件 ${name} 已移除`);
   } else {
     console.error(`❌ 插件 ${name} 不存在`);

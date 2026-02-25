@@ -46,7 +46,8 @@ class PluginManager {
     for (const file of files) {
       try {
         const pluginPath = join(builtinDir, file);
-        const importPath = "../plugins/" + file;
+        // 使用时间戳避免缓存问题
+        const importPath = "../plugins/" + file + "?t=" + Date.now();
         const module = await import(importPath);
         
         if (module.default) {
