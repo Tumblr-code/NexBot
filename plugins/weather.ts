@@ -31,25 +31,25 @@ const CITY_DATABASE: Record<string, { lat: number; lon: number; name: string; en
   "悉尼": { lat: -33.8688, lon: 151.2093, name: "悉尼", enName: "Sydney", country: "Australia" },
 };
 
-// 天气代码对应信息 - 中文
-const WEATHER_INFO: Record<number, { bg: string; accent: string; icon: string; desc: string }> = {
-  0: { bg: "#FFD700", accent: "#FFA500", icon: "☀️", desc: "晴朗" },
-  1: { bg: "#87CEEB", accent: "#4682B4", icon: "🌤️", desc: "大部晴朗" },
-  2: { bg: "#B0C4DE", accent: "#778899", icon: "⛅", desc: "多云" },
-  3: { bg: "#708090", accent: "#4a5568", icon: "☁️", desc: "阴天" },
-  45: { bg: "#D3D3D3", accent: "#A9A9A9", icon: "🌫️", desc: "雾" },
-  51: { bg: "#87CEFA", accent: "#5F9EA0", icon: "🌧️", desc: "毛毛雨" },
-  61: { bg: "#4682B4", accent: "#2F4F4F", icon: "🌧️", desc: "小雨" },
-  63: { bg: "#4169E1", accent: "#0000CD", icon: "🌧️", desc: "中雨" },
-  65: { bg: "#000080", accent: "#191970", icon: "🌧️", desc: "大雨" },
-  71: { bg: "#E0FFFF", accent: "#AFEEEE", icon: "❄️", desc: "小雪" },
-  73: { bg: "#B0E0E6", accent: "#87CEEB", icon: "❄️", desc: "中雪" },
-  75: { bg: "#ADD8E6", accent: "#4682B4", icon: "❄️", desc: "大雪" },
-  95: { bg: "#483D8B", accent: "#2F2F4F", icon: "⛈️", desc: "雷雨" },
+// 天气代码对应信息 - 中文 (icon 用 SVG 路径代替 emoji)
+const WEATHER_INFO: Record<number, { bg: string; accent: string; iconSvg: string; desc: string }> = {
+  0: { bg: "#FFD700", accent: "#FFA500", iconSvg: `<circle cx="300" cy="240" r="60" fill="#FFD700"/><g stroke="#FFA500" stroke-width="4" stroke-linecap="round"><line x1="300" y1="150" x2="300" y2="170"/><line x1="300" y1="310" x2="300" y2="330"/><line x1="210" y1="240" x2="230" y2="240"/><line x1="370" y1="240" x2="390" y2="240"/><line x1="236" y1="176" x2="250" y2="190"/><line x1="350" y1="290" x2="364" y2="304"/><line x1="236" y1="304" x2="250" y2="290"/><line x1="350" y1="190" x2="364" y2="176"/></g>`, desc: "晴朗" },
+  1: { bg: "#87CEEB", accent: "#4682B4", iconSvg: `<circle cx="260" cy="220" r="50" fill="#FFD700"/><path d="M 300 280 Q 260 280 240 250 Q 220 280 180 280 Q 140 280 140 240 Q 140 200 180 200 L 300 200 Q 360 200 360 240 Q 360 280 300 280" fill="#FFFFFF"/>`, desc: "大部晴朗" },
+  2: { bg: "#B0C4DE", accent: "#778899", iconSvg: `<circle cx="250" cy="200" r="40" fill="#FFD700" opacity="0.6"/><path d="M 280 280 Q 240 280 220 250 Q 200 280 160 280 Q 120 280 120 240 Q 120 200 160 200 L 280 200 Q 340 200 340 240 Q 340 280 280 280" fill="#FFFFFF"/>`, desc: "多云" },
+  3: { bg: "#708090", accent: "#4a5568", iconSvg: `<path d="M 300 280 Q 250 280 220 250 Q 190 280 140 280 Q 100 280 100 240 Q 100 200 140 200 L 300 200 Q 360 200 360 240 Q 360 280 300 280" fill="#E0E0E0"/><path d="M 320 240 Q 270 240 240 210 Q 210 240 160 240" fill="none" stroke="#C0C0C0" stroke-width="3"/>`, desc: "阴天" },
+  45: { bg: "#D3D3D3", accent: "#A9A9A9", iconSvg: `<path d="M 300 260 Q 250 260 220 230 Q 190 260 140 260 Q 100 260 100 220 Q 100 180 140 180 L 300 180 Q 360 180 360 220 Q 360 260 300 260" fill="#E8E8E8"/><g stroke="#A9A9A9" stroke-width="3" stroke-linecap="round"><line x1="180" y1="280" x2="160" y2="300"/><line x1="220" y1="280" x2="200" y2="300"/><line x1="260" y1="280" x2="240" y2="300"/><line x1="300" y1="280" x2="280" y2="300"/></g>`, desc: "雾" },
+  51: { bg: "#87CEFA", accent: "#5F9EA0", iconSvg: `<path d="M 300 240 Q 250 240 220 210 Q 190 240 140 240 Q 100 240 100 200 Q 100 160 140 160 L 300 160 Q 360 160 360 200 Q 360 240 300 240" fill="#E0F0FF"/><g stroke="#4682B4" stroke-width="3" stroke-linecap="round"><line x1="180" y1="260" x2="180" y2="280"/><line x1="220" y1="260" x2="220" y2="280"/><line x1="260" y1="260" x2="260" y2="280"/></g>`, desc: "毛毛雨" },
+  61: { bg: "#4682B4", accent: "#2F4F4F", iconSvg: `<path d="M 300 220 Q 250 220 220 190 Q 190 220 140 220 Q 100 220 100 180 Q 100 140 140 140 L 300 140 Q 360 140 360 180 Q 360 220 300 220" fill="#C0D8F0"/><g stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"><line x1="160" y1="240" x2="150" y2="270"/><line x1="200" y1="240" x2="190" y2="270"/><line x1="240" y1="240" x2="230" y2="270"/><line x1="280" y1="240" x2="270" y2="270"/></g>`, desc: "小雨" },
+  63: { bg: "#4169E1", accent: "#0000CD", iconSvg: `<path d="M 300 210 Q 250 210 220 180 Q 190 210 140 210 Q 100 210 100 170 Q 100 130 140 130 L 300 130 Q 360 130 360 170 Q 360 210 300 210" fill="#A0C0E0"/><g stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"><line x1="160" y1="230" x2="145" y2="270"/><line x1="210" y1="230" x2="195" y2="270"/><line x1="260" y1="230" x2="245" y2="270"/><line x1="310" y1="230" x2="295" y2="270"/></g>`, desc: "中雨" },
+  65: { bg: "#000080", accent: "#191970", iconSvg: `<path d="M 300 200 Q 250 200 220 170 Q 190 200 140 200 Q 100 200 100 160 Q 100 120 140 120 L 300 120 Q 360 120 360 160 Q 360 200 300 200" fill="#80A0C0"/><g stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"><line x1="150" y1="220" x2="130" y2="280"/><line x1="200" y1="220" x2="180" y2="280"/><line x1="250" y1="220" x2="230" y2="280"/><line x1="300" y1="220" x2="280" y2="280"/><line x1="350" y1="220" x2="330" y2="280"/></g>`, desc: "大雨" },
+  71: { bg: "#E0FFFF", accent: "#AFEEEE", iconSvg: `<path d="M 300 220 Q 250 220 220 190 Q 190 220 140 220 Q 100 220 100 180 Q 100 140 140 140 L 300 140 Q 360 140 360 180 Q 360 220 300 220" fill="#E0F8FF"/><g fill="#FFFFFF"><circle cx="170" cy="250" r="6"/><circle cx="220" cy="270" r="6"/><circle cx="270" cy="250" r="6"/></g>`, desc: "小雪" },
+  73: { bg: "#B0E0E6", accent: "#87CEEB", iconSvg: `<path d="M 300 210 Q 250 210 220 180 Q 190 210 140 210 Q 100 210 100 170 Q 100 130 140 130 L 300 130 Q 360 130 360 170 Q 360 210 300 210" fill="#D0F0FF"/><g fill="#FFFFFF"><rect x="160" y="240" width="8" height="8"/><rect x="210" y="260" width="8" height="8"/><rect x="260" y="240" width="8" height="8"/><rect x="185" y="280" width="8" height="8"/><rect x="235" y="280" width="8" height="8"/></g>`, desc: "中雪" },
+  75: { bg: "#ADD8E6", accent: "#4682B4", iconSvg: `<path d="M 300 200 Q 250 200 220 170 Q 190 200 140 200 Q 100 200 100 160 Q 100 120 140 120 L 300 120 Q 360 120 360 160 Q 360 200 300 200" fill="#C0E8FF"/><g fill="#FFFFFF"><rect x="150" y="230" width="10" height="10"/><rect x="200" y="250" width="10" height="10"/><rect x="250" y="230" width="10" height="10"/><rect x="300" y="250" width="10" height="10"/><rect x="175" y="280" width="10" height="10"/><rect x="225" y="280" width="10" height="10"/><rect x="275" y="280" width="10" height="10"/></g>`, desc: "大雪" },
+  95: { bg: "#483D8B", accent: "#2F2F4F", iconSvg: `<path d="M 300 200 Q 250 200 220 170 Q 190 200 140 200 Q 100 200 100 160 Q 100 120 140 120 L 300 120 Q 360 120 360 160 Q 360 200 300 200" fill="#606090"/><polygon points="180,230 170,260 190,260" fill="#FFD700"/><polygon points="230,230 220,260 240,260" fill="#FFD700"/><polygon points="280,230 270,260 290,260" fill="#FFD700"/><g stroke="#87CEFA" stroke-width="3" stroke-linecap="round"><line x1="180" y1="270" x2="170" y2="300"/><line x1="230" y1="270" x2="220" y2="300"/><line x1="280" y1="270" x2="270" y2="300"/></g>`, desc: "雷雨" },
 };
 
 function getWeatherInfo(code: number) {
-  return WEATHER_INFO[code] || { bg: "#87CEEB", accent: "#4682B4", icon: "🌡️", desc: "未知" };
+  return WEATHER_INFO[code] || { bg: "#87CEEB", accent: "#4682B4", iconSvg: `<circle cx="300" cy="240" r="50" fill="#87CEEB"/>`, desc: "未知" };
 }
 
 function getWindDir(degrees: number): string {
@@ -103,8 +103,8 @@ function generateWeatherPoster(
   <text x="300" y="130" font-family="Arial, sans-serif" font-size="24" 
         fill="${subTextColor}" text-anchor="middle">${country}</text>
   
-  <text x="300" y="270" font-family="Arial, 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif" font-size="130" text-anchor="middle">${info.icon}</text>
-  <text x="300" y="330" font-family="Arial, sans-serif" font-size="36" font-weight="bold"
+  ${info.iconSvg}
+  <text x="300" y="360" font-family="Arial, sans-serif" font-size="36" font-weight="bold"
         fill="${textColor}" text-anchor="middle">${info.desc}</text>
   
   <text x="300" y="430" font-family="Arial, sans-serif" font-size="100" font-weight="bold" 
