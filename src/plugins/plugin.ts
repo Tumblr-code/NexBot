@@ -77,10 +77,11 @@ const pluginPlugin: Plugin = {
               
               let availableText = "";
               for (const plugin of notInstalled) {
-                const installCmd = prefix + "plugin install " + plugin.name;
+                // 构建安装命令
+                const installCmdText = prefix + "plugin install " + plugin.name;
                 // 插件名称可点击复制安装命令，清理描述防止显示异常
                 const cleanDesc = cleanPluginDescription(plugin.description, 20);
-                availableText += `• <a href="tg://copy?text=${encodeURIComponent(installCmd)}">${fmt.code(plugin.name)}</a> — ${escapeHTML(cleanDesc)}\n`;
+                availableText += `• <a href="tg://copy?text=${encodeURIComponent(installCmdText)}">${fmt.code(plugin.name)}</a> — ${escapeHTML(cleanDesc)}\n`;
               }
               
               text += `<blockquote expandable>${availableText.trim()}</blockquote>\n\n`;
