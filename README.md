@@ -252,11 +252,7 @@ nexbot/
 │   ├── utils/                  # 工具函数
 │   ├── types/                  # 类型定义
 │   └── index.ts                # 入口文件
-├── plugins/                    # 扩展插件目录
-│   ├── ai.ts                   # AI 助手
-│   ├── pansou.ts               # 网盘搜索
-│   ├── privateguard.ts         # 私聊保护
-│   └── speedtest.ts            # 网速测试
+├── plugins/                    # 扩展插件目录（自主安装）
 ├── data/                       # 数据库目录
 └── logs/                       # 日志目录
 ```

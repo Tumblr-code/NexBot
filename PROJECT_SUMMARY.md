@@ -55,8 +55,7 @@ nexbot/
 │   │   ├── cli/              # 命令行工具
 │   │   │   └── pm.ts                 # 插件管理CLI (200行)
 │   │   └── index.ts          # 入口文件 (54行)
-│   └── plugins/
-│       └── example.ts        # 示例插件 (180行)
+│   └── plugins/              # 扩展插件目录（自主安装）
 │
 └── ⚙️ 其他
     ├── .gitignore            # Git忽略
