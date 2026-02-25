@@ -21,25 +21,24 @@ const sysinfoPlugin: Plugin = {
         const info = getSystemInfo();
         const botName = process.env.BOT_NAME || "NexBot";
         const botVersion = process.env.BOT_VERSION || "1.0.0";
+        const pluginCount = pluginManager.getAllPlugins().length;
 
-        let text = fmt.bold(`🤖 ${botName} v${botVersion}`) + "\n\n";
+        // 简约风格系统信息
+        let text = fmt.bold(`📊 ${botName}`) + ` ${fmt.italic("v" + botVersion)}\n\n`;
         
-        text += fmt.bold("📊 系统信息") + "\n";
-        text += `平台: ${info.platform} (${info.arch})\n`;
-        text += `Node.js: ${info.nodeVersion}\n`;
-        text += `运行时间: ${formatUptime(info.uptime)}\n\n`;
-
-        text += fmt.bold("💾 内存使用") + "\n";
-        text += `已用: ${info.memory.used} MB / ${info.memory.total} MB\n`;
-        text += `使用率: ${info.memory.percent}%\n\n`;
-
-        text += fmt.bold("💻 CPU") + "\n";
-        text += `型号: ${info.cpu.model.split(" @ ")[0]}\n`;
-        text += `核心数: ${info.cpu.cores}\n`;
-        text += `使用率: ${info.cpu.usage}%\n\n`;
-
-        text += fmt.bold("🔌 插件") + "\n";
-        text += `已加载: ${pluginManager.getAllPlugins().length} 个\n`;
+        text += `${info.platform} · ${info.arch} · ${info.nodeVersion}\n`;
+        text += `⏱️ ${formatUptime(info.uptime)}\n\n`;
+        
+        // 内存进度条风格
+        const memPercent = info.memory.percent;
+        const memBar = "█".repeat(Math.floor(memPercent / 10)) + "░".repeat(10 - Math.floor(memPercent / 10));
+        text += `💾 ${memBar} ${memPercent}%\n`;
+        text += `${info.memory.used}MB / ${info.memory.total}MB\n\n`;
+        
+        // CPU 信息
+        const cpuBar = "█".repeat(Math.floor(info.cpu.usage / 10)) + "░".repeat(10 - Math.floor(info.cpu.usage / 10));
+        text += `💻 ${cpuBar} ${info.cpu.usage}%\n`;
+        text += `${info.cpu.cores}核 · ${pluginCount}插件`;
 
         await ctx.replyHTML(text);
       },
@@ -66,9 +65,9 @@ const sysinfoPlugin: Plugin = {
         const sudoCount = db.getSudoList().length;
         const aliases = Object.keys(db.getAllAliases()).length;
 
-        let text = fmt.bold("💾 数据库信息") + "\n\n";
-        text += `Sudo 用户: ${sudoCount}\n`;
-        text += `命令别名: ${aliases}\n`;
+        let text = fmt.bold("💾 数据库") + "\n\n";
+        text += `👑 ${sudoCount} 管理员\n`;
+        text += `🏷️ ${aliases} 别名`;
 
         await ctx.replyHTML(text);
       },
@@ -81,24 +80,16 @@ const sysinfoPlugin: Plugin = {
         const status = healthChecker.getStatus();
         const m = status.metrics;
         
-        let text = fmt.bold("🏥 健康状态") + "\n\n";
-        text += `状态: ${status.status === "healthy" ? "✅ 健康" : status.status === "degraded" ? "⚠️ 降级" : "❌ 异常"}\n\n`;
+        const statusIcon = status.status === "healthy" ? "🟢" : status.status === "degraded" ? "🟡" : "🔴";
         
-        text += fmt.bold("📊 指标") + "\n";
-        text += `运行时间: ${formatUptime(m.uptime)}\n`;
-        text += `内存使用: ${m.memory.used}MB / ${m.memory.total}MB (${m.memory.percent}%)\n`;
-        text += `消息处理: ${m.messages.total} 条 (${m.messages.errors} 错误)\n`;
-        text += `命令执行: ${m.commands.total} 条 (${m.commands.errors} 错误)\n\n`;
+        let text = fmt.bold(`${statusIcon} 健康状态`) + "\n\n";
+        text += `⏱️ ${formatUptime(m.uptime)}\n`;
+        text += `💾 ${m.memory.percent}% · 📩 ${m.messages.total} · ⚡ ${m.commands.total}\n`;
         
         if (status.checks.length > 0) {
-          text += fmt.bold("🔍 检查项") + "\n";
-          for (const check of status.checks) {
-            const icon = check.status === "pass" ? "✅" : check.status === "warn" ? "⚠️" : "❌";
-            text += `${icon} ${check.name}`;
-            if (check.message) {
-              text += `: ${check.message}`;
-            }
-            text += "\n";
+          const failedChecks = status.checks.filter(c => c.status !== "pass");
+          if (failedChecks.length > 0) {
+            text += "\n" + failedChecks.map(c => `⚠️ ${c.name}`).join("\n");
           }
         }
 
@@ -112,11 +103,9 @@ const sysinfoPlugin: Plugin = {
       handler: async (msg, args, ctx) => {
         const stats = defaultCache.getStats();
         
-        let text = fmt.bold("💾 缓存统计") + "\n\n";
-        text += `缓存条目: ${stats.size}\n`;
-        text += `命中次数: ${stats.hits}\n`;
-        text += `未命中次数: ${stats.misses}\n`;
-        text += `命中率: ${stats.hitRate}%\n`;
+        let text = fmt.bold("💾 缓存") + "\n\n";
+        text += `📦 ${stats.size} 条目\n`;
+        text += `🎯 ${stats.hitRate}% 命中率`;
 
         await ctx.replyHTML(text);
       },
@@ -129,9 +118,9 @@ const sysinfoPlugin: Plugin = {
       handler: async (msg, args, ctx) => {
         const stats = defaultRateLimiter.getStats();
         
-        let text = fmt.bold("🚦 限流统计") + "\n\n";
-        text += `跟踪用户: ${stats.tracked}\n`;
-        text += `被封禁: ${stats.blocked}\n`;
+        let text = fmt.bold("🚦 限流") + "\n\n";
+        text += `👥 ${stats.tracked} 用户\n`;
+        text += `🚫 ${stats.blocked} 封禁`;
 
         await ctx.replyHTML(text);
       },

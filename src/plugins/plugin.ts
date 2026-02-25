@@ -26,42 +26,66 @@ const pluginPlugin: Plugin = {
           case "list":
           case "ls": {
             const prefix = process.env.CMD_PREFIX || ".";
-            
-            // 获取所有已加载的插件
-            const allPlugins = pluginManager.getAllPlugins();
-            
-            // 构建插件列表内容（放入折叠块，命令可点击复制）
             const copyCmd = (cmd: string) => `<a href="tg://copy?text=${encodeURIComponent(prefix + cmd)}">${fmt.code(cmd)}</a>`;
             
-            let pluginListText = "";
-            
-            for (const plugin of allPlugins) {
-              const cmds: string[] = [];
-              
-              // 收集 commands 中的命令
-              if (plugin.commands) {
-                cmds.push(...Object.keys(plugin.commands));
-              }
-              
-              // 收集 cmdHandlers 中的命令
-              if (plugin.cmdHandlers) {
-                cmds.push(...Object.keys(plugin.cmdHandlers));
-              }
-              
-              // 显示插件信息
-              if (cmds.length > 0) {
-                pluginListText += `${plugin.name} (${cmds.length}个命令)\n`;
-                pluginListText += `  ${cmds.map(copyCmd).join(" ")}\n\n`;
-              } else {
-                pluginListText += `${plugin.name}\n`;
-                pluginListText += `  (无命令)\n\n`;
-              }
+            // 获取远程仓库插件列表
+            let remotePlugins: Record<string, any> = {};
+            try {
+              const registryUrl = process.env.PLUGIN_REGISTRY_URL || "https://raw.githubusercontent.com/nexbot/plugins/main/registry.json";
+              const response = await axios.get(registryUrl, { timeout: 5000 });
+              remotePlugins = response.data?.plugins || {};
+            } catch (err) {
+              logger.warn("获取远程插件列表失败");
             }
             
-            // 构建最终消息
-            let text = fmt.bold("📦 已加载插件和命令") + "\n\n";
-            text += `<blockquote expandable>${pluginListText.trim()}</blockquote>\n\n`;
-            text += "使用 " + fmt.code(prefix + "help <命令>") + " 查看详细帮助";
+            // 获取已安装插件
+            const installedPlugins = pluginManager.getAllPlugins();
+            const installedNames = new Set(installedPlugins.map(p => p.name));
+            
+            // 构建消息
+            let text = fmt.bold("🔌 NexBot 插件中心") + "\n\n";
+            
+            // 1. 远程可用插件（带详细介绍）
+            const availablePlugins = Object.entries(remotePlugins).filter(([name]) => !installedNames.has(name));
+            
+            if (availablePlugins.length > 0) {
+              text += fmt.bold("📥 可安装插件") + "\n";
+              
+              let availableText = "";
+              for (const [name, info] of availablePlugins.slice(0, 10)) { // 最多显示10个
+                const installBtn = `<a href="tg://copy?text=${encodeURIComponent(prefix + "plugin install " + name)}">⬇️ 安装</a>`;
+                availableText += `${fmt.bold(name)} v${info.version || "1.0.0"} ${installBtn}\n`;
+                if (info.description) {
+                  availableText += `  ${info.description}\n`;
+                }
+                availableText += `  👤 ${info.author || "Unknown"}\n\n`;
+              }
+              
+              if (availablePlugins.length > 10) {
+                availableText += `... 还有 ${availablePlugins.length - 10} 个插件\n`;
+              }
+              
+              text += `<blockquote expandable>${availableText.trim()}</blockquote>\n\n`;
+            }
+            
+            // 2. 本地已安装插件（简洁显示）
+            if (installedPlugins.length > 0) {
+              text += fmt.bold("✅ 已安装插件") + "\n";
+              
+              let installedText = "";
+              for (const plugin of installedPlugins) {
+                const cmds: string[] = [];
+                if (plugin.commands) cmds.push(...Object.keys(plugin.commands));
+                if (plugin.cmdHandlers) cmds.push(...Object.keys(plugin.cmdHandlers));
+                
+                const cmdList = cmds.length > 0 ? cmds.slice(0, 3).join(", ") + (cmds.length > 3 ? "..." : "") : "无命令";
+                installedText += `• ${fmt.bold(plugin.name)} — ${cmdList}\n`;
+              }
+              
+              text += `<blockquote expandable>${installedText.trim()}</blockquote>\n\n`;
+            }
+            
+            text += `💡 使用 ${copyCmd("plugin install <名称>")} 安装插件`;
             
             await ctx.replyHTML(text);
             break;

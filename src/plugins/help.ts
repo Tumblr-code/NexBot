@@ -72,42 +72,26 @@ const helpPlugin: Plugin = {
 
           await ctx.replyHTML(text);
         } else {
-          // 显示主帮助 - 包含项目简介
+          // 显示主帮助 - 简约风格
           const botName = process.env.BOT_NAME || "NexBot";
           const botVersion = process.env.BOT_VERSION || "1.0.0";
+          const copyCmd = (cmd: string, desc: string) => `<a href="tg://copy?text=${encodeURIComponent(prefix + cmd)}">${fmt.code(prefix + cmd)}</a> — ${desc}`;
           
-          let text = fmt.bold("🤖 " + botName + " v" + botVersion) + "\n\n";
+          let text = fmt.bold(`🤖 ${botName}`) + ` ${fmt.italic("v" + botVersion)}\n\n`;
           
-          // 项目简介
-          text += "<i>一款功能强大的 Telegram Bot 框架，支持插件扩展、系统监控、网盘搜索等功能。</i>\n\n";
+          // 简约介绍
+          text += "⚡ 极速 · 🔌 插件化 · 🛡️ 安全\n";
+          text += `前缀 ${fmt.code(prefix)} · 帮助 ${copyCmd("help <命令>", "详情")}\n\n`;
           
-          // 命令前缀说明
-          text += "前缀: " + fmt.code(prefix) + "\n";
-          text += "使用 " + fmt.code(prefix + "help <命令>") + " 查看详细帮助\n\n";
-          
-          // 常用命令列表（放入折叠块，可点击复制）
-          const copyCmd = (cmd: string, desc: string) => `<a href="tg://copy?text=${encodeURIComponent(prefix + cmd)}">${fmt.code(prefix + cmd)}</a> - ${desc}`;
-          
+          // 分类命令列表
           let commandsText = "";
-          commandsText += copyCmd("help", "显示帮助") + "\n";
-          commandsText += copyCmd("ping", "测试延迟") + "\n";
-          commandsText += copyCmd("id", "获取聊天信息") + "\n";
-          commandsText += copyCmd("echo", "回声测试") + "\n\n";
+          commandsText += fmt.bold("基础") + "\n";
+          commandsText += `${copyCmd("ping", "延迟")} ${copyCmd("id", "信息")} ${copyCmd("echo", "回声")}\n\n`;
+          commandsText += fmt.bold("系统") + "\n";
+          commandsText += `${copyCmd("sysinfo", "状态")} ${copyCmd("health", "健康")} ${copyCmd("db", "数据")}\n\n`;
+          commandsText += fmt.bold("扩展") + "\n";
+          commandsText += `${copyCmd("ai", "AI对话")} ${copyCmd("pan", "网盘")} ${copyCmd("plugin list", "插件")}`;
           
-          commandsText += "📊 系统信息:\n";
-          commandsText += copyCmd("sysinfo", "系统状态") + "\n";
-          commandsText += copyCmd("uptime", "运行时间") + "\n";
-          commandsText += copyCmd("health", "健康检查") + "\n";
-          commandsText += copyCmd("db", "数据库统计") + "\n";
-          commandsText += copyCmd("cache", "缓存统计") + "\n";
-          commandsText += copyCmd("ratelimit", "限流统计") + "\n\n";
-          
-          commandsText += "🔍 其他功能:\n";
-          commandsText += copyCmd("speedtest", "网速测试") + "\n";
-          commandsText += copyCmd("pan", "网盘搜索") + "\n";
-          commandsText += copyCmd("plugin list", "插件列表");
-          
-          text += fmt.bold("📌 常用命令") + "\n";
           text += `<blockquote expandable>${commandsText}</blockquote>`;
           
           await ctx.replyHTML(text);

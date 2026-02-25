@@ -95,19 +95,13 @@ const sudoPlugin: Plugin = {
           case "l": {
             const sudoList = db.getSudoList();
             if (sudoList.length === 0) {
-              await ctx.reply("👑 sudo 列表为空");
+              await ctx.reply(fmt.bold("👑 Sudo") + "\n\n暂无管理员");
               return;
             }
 
-            // 构建用户列表（放入折叠块）
-            let userListText = "";
-            for (const userId of sudoList) {
-              userListText += userId + "\n";
-            }
-            userListText += "\n总计: " + sudoList.length + " 人";
+            let text = fmt.bold(`👑 Sudo · ${sudoList.length}人`) + "\n\n";
+            text += sudoList.map(id => `· <code>${id}</code>`).join("\n");
             
-            let text = fmt.bold("👑 Sudo 用户列表") + "\n\n";
-            text += `<blockquote expandable>${userListText.trim()}</blockquote>`;
             await ctx.replyHTML(text);
             break;
           }
