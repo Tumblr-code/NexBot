@@ -30,8 +30,8 @@ const pluginPlugin: Plugin = {
             // 获取所有已加载的插件
             const allPlugins = pluginManager.getAllPlugins();
             
-            // 构建插件和命令列表
-            let text = fmt.bold("📦 已加载插件和命令") + "\n\n";
+            // 构建插件列表内容（放入折叠块）
+            let pluginListText = "";
             
             for (const plugin of allPlugins) {
               const cmds: string[] = [];
@@ -48,15 +48,18 @@ const pluginPlugin: Plugin = {
               
               // 显示插件信息
               if (cmds.length > 0) {
-                text += `${fmt.bold(plugin.name)} (${cmds.length}个命令)\n`;
-                text += `  ${fmt.code(cmds.join(", "))}\n\n`;
+                pluginListText += `${plugin.name} (${cmds.length}个命令)\n`;
+                pluginListText += `  ${cmds.join(", ")}\n\n`;
               } else {
-                text += `${fmt.bold(plugin.name)}\n`;
-                text += `  (无命令)\n\n`;
+                pluginListText += `${plugin.name}\n`;
+                pluginListText += `  (无命令)\n\n`;
               }
             }
             
-            text += `使用 ${fmt.code(`${prefix}help <命令>`)} 查看详细帮助`;
+            // 构建最终消息
+            let text = fmt.bold("📦 已加载插件和命令") + "\n\n";
+            text += `<blockquote expandable>${pluginListText.trim()}</blockquote>\n\n`;
+            text += "使用 " + fmt.code(prefix + "help <命令>") + " 查看详细帮助";
             
             await ctx.replyHTML(text);
             break;
@@ -72,9 +75,9 @@ const pluginPlugin: Plugin = {
             
             const success = await pluginManager.reloadPlugin(name);
             if (success) {
-              await ctx.reply(`✅ 插件 ${name} 已重载`);
+              await ctx.reply("✅ 插件 " + name + " 已重载");
             } else {
-              await ctx.reply(`❌ 插件 ${name} 重载失败`);
+              await ctx.reply("❌ 插件 " + name + " 重载失败");
             }
             break;
           }
@@ -102,13 +105,13 @@ const pluginPlugin: Plugin = {
             
             if (!existsSync(pluginFile)) {
               logger.warn(`插件文件不存在: ${pluginFile}`);
-              await ctx.reply(`❌ 插件 "${name}" 不存在\n使用 ${fmt.code(".plugin list")} 查看可用插件`);
+              await ctx.reply("❌ 插件 \"" + name + "\" 不存在\n使用 " + fmt.code(".plugin list") + " 查看可用插件");
               return;
             }
             
             // 检查是否已启用
             if (db.isPluginEnabled(name)) {
-              await ctx.reply(`⚠️ 插件 "${name}" 已安装`);
+              await ctx.reply("⚠️ 插件 \"" + name + "\" 已安装");
               return;
             }
             
@@ -119,7 +122,7 @@ const pluginPlugin: Plugin = {
               const module = await import(importPath);
               
               if (!module.default) {
-                await ctx.reply(`❌ 插件 "${name}" 格式错误: 没有默认导出`);
+                await ctx.reply("❌ 插件 \"" + name + "\" 格式错误: 没有默认导出");
                 return;
               }
               
@@ -133,11 +136,11 @@ const pluginPlugin: Plugin = {
               
               // 注册插件
               await pluginManager.registerPlugin(module.default, pluginFile, true);
-              await ctx.reply(`✅ 插件 "${name}" 安装成功`);
+              await ctx.reply("✅ 插件 \"" + name + "\" 安装成功");
             } catch (err: any) {
               logger.error(`安装插件失败 ${name}:`, err);
               const errorMsg = err?.message || String(err);
-              await ctx.reply(`❌ 插件 "${name}" 加载失败:\n${errorMsg}`);
+              await ctx.reply("❌ 插件 \"" + name + "\" 加载失败:\n" + errorMsg);
             }
             break;
           }
@@ -153,14 +156,14 @@ const pluginPlugin: Plugin = {
             
             // 检查插件是否已启用
             if (!db.isPluginEnabled(name)) {
-              await ctx.reply(`⚠️ 插件 "${name}" 未安装`);
+              await ctx.reply("⚠️ 插件 \"" + name + "\" 未安装");
               return;
             }
             
             // 卸载插件
             await pluginManager.unregisterPlugin(name);
             db.disablePlugin(name);
-            await ctx.reply(`✅ 插件 "${name}" 已卸载`);
+            await ctx.reply("✅ 插件 \"" + name + "\" 已卸载");
             break;
           }
 
@@ -175,7 +178,7 @@ const pluginPlugin: Plugin = {
                 return;
               }
               pluginManager.setAlias(alias, command);
-              await ctx.reply(`✅ 别名已设置: ${alias} -> ${command}`);
+              await ctx.reply("✅ 别名已设置: " + alias + " -> " + command);
             } else if (action === "remove" || action === "rm") {
               const alias = args[2];
               if (!alias) {
@@ -183,16 +186,22 @@ const pluginPlugin: Plugin = {
                 return;
               }
               pluginManager.removeAlias(alias);
-              await ctx.reply(`✅ 别名已删除: ${alias}`);
+              await ctx.reply("✅ 别名已删除: " + alias);
             } else {
               const aliases = pluginManager.getAliases();
-              let text = fmt.bold("🏷️ 命令别名") + "\n\n";
-              for (const [alias, cmd] of Object.entries(aliases)) {
-                text += `${alias} -> ${cmd}\n`;
-              }
+              
               if (Object.keys(aliases).length === 0) {
-                text += "暂无别名";
+                await ctx.reply(fmt.bold("🏷️ 命令别名") + "\n\n暂无别名");
+                return;
               }
+              
+              let aliasListText = "";
+              for (const [alias, cmd] of Object.entries(aliases)) {
+                aliasListText += `${alias} -> ${cmd}\n`;
+              }
+              
+              let text = fmt.bold("🏷️ 命令别名") + "\n\n";
+              text += `<blockquote expandable>${aliasListText.trim()}</blockquote>`;
               await ctx.replyHTML(text);
             }
             break;
@@ -201,12 +210,12 @@ const pluginPlugin: Plugin = {
           default: {
             const prefix = process.env.CMD_PREFIX || ".";
             let text = fmt.bold("🔌 插件管理") + "\n\n";
-            text += `${fmt.code(`${prefix}plugin list`)} - 列出可用插件\n`;
-            text += `${fmt.code(`${prefix}plugin install <名称>`)} - 安装插件\n`;
-            text += `${fmt.code(`${prefix}plugin remove <名称>`)} - 卸载插件\n`;
-            text += `${fmt.code(`${prefix}plugin reload <name>`)} - 重载指定插件\n`;
-            text += `${fmt.code(`${prefix}plugin reloadall`)} - 重载所有插件\n`;
-            text += `${fmt.code(`${prefix}plugin alias`)} - 查看别名列表\n`;
+            text += fmt.code(prefix + "plugin list") + " - 列出所有插件\n";
+            text += fmt.code(prefix + "plugin install <名称>") + " - 安装插件\n";
+            text += fmt.code(prefix + "plugin remove <名称>") + " - 卸载插件\n";
+            text += fmt.code(prefix + "plugin reload <name>") + " - 重载指定插件\n";
+            text += fmt.code(prefix + "plugin reloadall") + " - 重载所有插件\n";
+            text += fmt.code(prefix + "plugin alias") + " - 查看别名列表";
             await ctx.replyHTML(text);
           }
         }

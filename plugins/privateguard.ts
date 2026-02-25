@@ -812,24 +812,30 @@ const callbackHandler = async (event: any): Promise<void> => {
 
 // 管理命令：查看列表
 const listCommand = async (msg: Api.Message): Promise<void> => {
+  const client = (msg as any).client;
   const allowedList = Array.from(allowedUsers.entries());
   const pendingList = Array.from(pendingUsers.entries());
 
-  let text = `📊 私聊保护统计\n\n`;
-  text += `✅ 已验证用户：${allowedList.length} 人\n`;
-  text += `⏳ 验证中用户：${pendingList.length} 人\n\n`;
-  
+  // 构建用户列表（放入折叠块）
+  let userListText = "";
   if (allowedList.length > 0) {
-    text += "已验证用户列表：\n";
     allowedList.forEach(([id, info], index) => {
       const username = info.username ? `@${info.username}` : "";
-      text += `${index + 1}. ${id} ${username}\n`;
+      userListText += `${index + 1}. ${id} ${username}\n`;
     });
   } else {
-    text += "暂无已验证用户";
+    userListText += "暂无已验证用户";
   }
+  
+  let text = "<b>📊 私聊保护统计</b>\n\n";
+  text += `✅ 已验证用户：${allowedList.length} 人\n`;
+  text += `⏳ 验证中用户：${pendingList.length} 人\n\n`;
+  text += `<blockquote expandable>${userListText.trim()}</blockquote>`;
 
-  await msg.reply({ message: text });
+  await client.sendMessage(msg.chatId!, {
+    message: text,
+    parseMode: "html",
+  });
 };
 
 // 管理命令：添加白名单
@@ -920,22 +926,29 @@ const setTypeCommand = async (msg: Api.Message): Promise<void> => {
 
 // 查看黑名单命令
 const listBlockedCommand = async (msg: Api.Message): Promise<void> => {
+  const client = (msg as any).client;
   const blockedList = Array.from(blockedUsers.entries());
 
-  let text = `🚫 黑名单列表\n\n`;
-  text += `共 ${blockedList.length} 人\n\n`;
-  
+  // 构建黑名单列表（放入折叠块）
+  let blockedListText = "";
   if (blockedList.length > 0) {
     blockedList.forEach(([id, info], index) => {
       const username = info.username ? `@${info.username}` : "";
       const reason = info.reason || "";
-      text += `${index + 1}. ${id} ${username} (${reason})\n`;
+      blockedListText += `${index + 1}. ${id} ${username} (${reason})\n`;
     });
   } else {
-    text += "暂无黑名单用户";
+    blockedListText += "暂无黑名单用户";
   }
 
-  await msg.reply({ message: text });
+  let text = "<b>🚫 黑名单列表</b>\n\n";
+  text += `共 ${blockedList.length} 人\n\n`;
+  text += `<blockquote expandable>${blockedListText.trim()}</blockquote>`;
+
+  await client.sendMessage(msg.chatId!, {
+    message: text,
+    parseMode: "html",
+  });
 };
 
 // 拉黑用户命令
