@@ -5,6 +5,24 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.0.22] - 2026-02-26
+
+### Fixed
+
+- **plugins/system.ts**: 修复 `sys` 命令参数类型错误，将 `string[]` 正确转换为 `string`
+- **src/plugins/debug.ts**: 修复 `chatType` 类型赋值，使用正确的枚举值（"User" / "Chat"）
+
+### Changed
+
+- 版本号更新至 1.0.22
+
+## [1.0.21] - 2026-02-25
+
+### Changed
+
+- 项目重命名为 NexBot
+- 更新所有相关链接和路径
+
 ## [1.0.1] - 2026-02-25
 
 ### Fixed
