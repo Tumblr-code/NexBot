@@ -76,7 +76,7 @@ const debugPlugin: Plugin = {
 
     msg: {
       description: "获取消息原始数据（调试用）",
-      sudo: true,
+
       handler: async (msg, args, ctx) => {
         // @ts-ignore - toJSON may not exist on Message type
         const data = JSON.stringify((msg as any).toJSON ? (msg as any).toJSON() : msg, null, 2);

@@ -26,7 +26,7 @@ const pluginPlugin: Plugin = {
   commands: {
     plugin: {
       description: "插件管理",
-      sudo: true,
+
       aliases: ["pm", "plugins"],
       examples: ["plugin list", "plugin install <name>", "plugin remove <name>"],
       handler: async (msg, args, ctx) => {

@@ -25,10 +25,10 @@
 
 **命令**: `exec`, `shell`, `sh`, `cmd`, `eval`, `js`
 
-| 命令 | 描述 | 权限 |
-|------|------|------|
-| `exec <命令>` | 执行 Shell 命令 | sudo |
-| `eval <代码>` | 执行 JavaScript 代码 | sudo |
+| 命令 | 描述 |
+|------|------|
+| `exec <命令>` | 执行 Shell 命令 |
+| `eval <代码>` | 执行 JavaScript 代码 |
 
 **示例**:
 ```
@@ -48,12 +48,12 @@
 
 **命令**: `id`, `chatid`, `chat`, `echo`, `say`, `ping`, `pong`, `msg`
 
-| 命令 | 描述 | 权限 |
-|------|------|------|
-| `id` | 获取当前聊天信息 | 所有人 |
-| `echo <文本>` | 回声测试 | 所有人 |
-| `ping` | 测试响应速度 | 所有人 |
-| `msg` | 获取消息原始 JSON 数据 | sudo |
+| 命令 | 描述 |
+|------|------|
+| `id` | 获取当前聊天信息 |
+| `echo <文本>` | 回声测试 |
+| `ping` | 测试响应速度 |
+| `msg` | 获取消息原始 JSON 数据 |
 
 **示例**:
 ```
@@ -68,14 +68,14 @@
 
 **命令**: `sysinfo`, `status`, `stats`, `info`, `uptime`, `up`, `db`, `database`, `health`, `hc`, `cache`, `ratelimit`, `rl`
 
-| 命令 | 描述 | 权限 |
-|------|------|------|
-| `sysinfo` | 系统信息（内存、CPU、运行时间） | 所有人 |
-| `uptime` | 显示运行时间 | 所有人 |
-| `health` | 健康状态检查 | 所有人 |
-| `db` | 数据库统计 | sudo |
-| `cache` | 缓存统计 | sudo |
-| `ratelimit` | 限流统计 | sudo |
+| 命令 | 描述 |
+|------|------|
+| `sysinfo` | 系统信息（内存、CPU、运行时间） |
+| `uptime` | 显示运行时间 |
+| `health` | 健康状态检查 |
+| `db` | 数据库统计 |
+| `cache` | 缓存统计 |
+| `ratelimit` | 限流统计 |
 
 **示例输出**:
 ```
@@ -97,16 +97,16 @@ linux · x64 · v20.0.0
 
 **命令**: `plugin`, `pm`, `plugins`
 
-| 用法 | 描述 | 权限 |
-|------|------|------|
-| `plugin list` | 查看插件列表 | sudo |
-| `plugin install <名称>` | 安装插件 | sudo |
-| `plugin remove <名称>` | 卸载插件 | sudo |
-| `plugin reload <名称>` | 重载插件 | sudo |
-| `plugin reloadall` | 重载所有插件 | sudo |
-| `plugin alias` | 查看命令别名 | sudo |
-| `plugin alias add <别名> <命令>` | 添加别名 | sudo |
-| `plugin alias remove <别名>` | 删除别名 | sudo |
+| 用法 | 描述 |
+|------|------|
+| `plugin list` | 查看插件列表 |
+| `plugin install <名称>` | 安装插件 |
+| `plugin remove <名称>` | 卸载插件 |
+| `plugin reload <名称>` | 重载插件 |
+| `plugin reloadall` | 重载所有插件 |
+| `plugin alias` | 查看命令别名 |
+| `plugin alias add <别名> <命令>` | 添加命令别名 |
+| `plugin alias remove <别名>` | 删除命令别名 |
 
 **示例**:
 ```
@@ -216,16 +216,16 @@ linux · x64 · v20.0.0
 
 **管理命令**:
 
-| 命令 | 描述 | 权限 |
-|------|------|------|
-| `pglist` | 查看已验证用户列表 | sudo |
-| `pgallow <用户ID>` | 手动添加白名单 | sudo |
-| `pgremove <用户ID>` | 移除白名单 | sudo |
-| `pgreset` | 重置所有数据 | sudo |
-| `pgtype <类型>` | 切换验证类型 | sudo |
-| `pgblocklist` | 查看黑名单 | sudo |
-| `pgblock <用户ID>` | 拉黑用户 | sudo |
-| `pgunblock <用户ID>` | 解除拉黑 | sudo |
+| 命令 | 描述 |
+|------|------|
+| `pglist` | 查看已验证用户列表 |
+| `pgallow <用户ID>` | 手动添加白名单 |
+| `pgremove <用户ID>` | 移除白名单 |
+| `pgreset` | 重置所有数据 |
+| `pgtype <类型>` | 切换验证类型 |
+| `pgblocklist` | 查看黑名单 |
+| `pgblock <用户ID>` | 拉黑用户 |
+| `pgunblock <用户ID>` | 解除拉黑 |
 
 **验证类型**:
 - `math` - 数学计算（如：15 + 23 = ?）

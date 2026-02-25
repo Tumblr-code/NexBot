@@ -69,7 +69,7 @@ const speedtestPlugin: Plugin = {
       description: "测试网络速度",
       aliases: ["st", "speed"],
       examples: ["speedtest"],
-      sudo: true,
+
       handler: async (msg, args, ctx) => {
         try {
           // 修复：添加空值检查，确保 chatId 存在

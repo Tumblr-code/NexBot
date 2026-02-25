@@ -60,7 +60,7 @@ const sysinfoPlugin: Plugin = {
 
     db: {
       description: "数据库信息",
-      sudo: true,
+
       aliases: ["database"],
       handler: async (msg, args, ctx) => {
         const aliases = Object.keys(db.getAllAliases()).length;
@@ -98,7 +98,7 @@ const sysinfoPlugin: Plugin = {
 
     cache: {
       description: "缓存统计",
-      sudo: true,
+
       handler: async (msg, args, ctx) => {
         const stats = defaultCache.getStats();
         
@@ -112,7 +112,7 @@ const sysinfoPlugin: Plugin = {
 
     ratelimit: {
       description: "限流统计",
-      sudo: true,
+
       aliases: ["rl"],
       handler: async (msg, args, ctx) => {
         const stats = defaultRateLimiter.getStats();

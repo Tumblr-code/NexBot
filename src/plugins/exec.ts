@@ -12,7 +12,7 @@ const execPlugin: Plugin = {
   commands: {
     exec: {
       description: "执行 shell 命令",
-      sudo: true,
+
       aliases: ["shell", "sh", "cmd"],
       examples: ["exec ls -la", "exec pwd"],
       handler: async (msg, args, ctx) => {
@@ -77,7 +77,7 @@ const execPlugin: Plugin = {
 
     eval: {
       description: "执行 JavaScript 代码",
-      sudo: true,
+
       aliases: ["js"],
       examples: ["eval 1 + 1", "eval console.log('Hello')"],
       handler: async (msg, args, ctx) => {
