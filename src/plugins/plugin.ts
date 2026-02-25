@@ -1,10 +1,11 @@
 import { Plugin } from "../types/index.js";
 import { pluginManager } from "../core/pluginManager.js";
 import { db } from "../utils/database.js";
-import { fmt } from "../utils/context.js";
+import { fmt, escapeHTML } from "../utils/context.js";
 import { logger } from "../utils/logger.js";
 import { readdirSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { cleanPluginDescription } from "../utils/helpers.js";
 
 // 插件信息接口
 interface PluginInfo {
@@ -77,9 +78,9 @@ const pluginPlugin: Plugin = {
               let availableText = "";
               for (const plugin of notInstalled) {
                 const installCmd = prefix + "plugin install " + plugin.name;
-                // 插件名称可点击复制安装命令，显示完整描述
-                const fullDesc = plugin.description.split("\n")[0];
-                availableText += `• <a href="tg://copy?text=${encodeURIComponent(installCmd)}">${fmt.code(plugin.name)}</a> — ${fullDesc}\n`;
+                // 插件名称可点击复制安装命令，清理描述防止显示异常
+                const cleanDesc = cleanPluginDescription(plugin.description, 20);
+                availableText += `• <a href="tg://copy?text=${encodeURIComponent(installCmd)}">${fmt.code(plugin.name)}</a> — ${escapeHTML(cleanDesc)}\n`;
               }
               
               text += `<blockquote expandable>${availableText.trim()}</blockquote>\n\n`;

@@ -2,6 +2,7 @@ import { Plugin } from "../types/index.js";
 import { pluginManager } from "../core/pluginManager.js";
 import { fmt, escapeHTML } from "../utils/context.js";
 import { VERSION } from "../utils/version.js";
+import { cleanPluginDescription } from "../utils/helpers.js";
 
 const helpPlugin: Plugin = {
   name: "help",
@@ -34,7 +35,7 @@ const helpPlugin: Plugin = {
           // 构建详细信息（放入折叠块）
           let detailText = "";
           
-          detailText += "描述: " + def.description + "\n";
+          detailText += "描述: " + escapeHTML(def.description) + "\n";
           detailText += "来源插件: " + cmdInfo.plugin + "\n";
           
           // 如果命令来自 cmdHandlers，显示更详细的信息
@@ -52,7 +53,7 @@ const helpPlugin: Plugin = {
             // 显示插件描述
             if (plugin.description) {
               detailText += "\n插件说明:\n";
-              detailText += plugin.description + "\n";
+              detailText += escapeHTML(plugin.description) + "\n";
             }
           }
           
@@ -105,13 +106,8 @@ const helpPlugin: Plugin = {
               
               // 取第一个命令作为代表
               const mainCmd = cmds[0] || plugin.name;
-              // 简化描述：移除所有非中文/英文/数字字符，取前4个字符
-              let rawDesc = plugin.description?.split('\n')[0] || '插件';
-              // 只保留中英文和数字
-              rawDesc = rawDesc.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').trim();
-              // 限制4个字符
-              rawDesc = rawDesc.slice(0, 4) || '插件';
-              const shortDesc = escapeHTML(rawDesc);
+              // 使用工具函数清理描述
+              const shortDesc = escapeHTML(cleanPluginDescription(plugin.description, 4));
               
               commandsText += `${copyCmd(mainCmd, shortDesc)} `;
             }

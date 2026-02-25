@@ -10,6 +10,26 @@ export function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * 清理插件描述，移除 emoji 和特殊字符，用于帮助显示
+ */
+export function cleanPluginDescription(description: string | undefined, maxLength: number = 4): string {
+  if (!description) return '插件';
+  
+  // 取第一行
+  let desc = description.split('\n')[0];
+  
+  // 只保留中英文和数字
+  desc = desc.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').trim();
+  
+  // 限制长度
+  if (desc.length > maxLength) {
+    desc = desc.slice(0, maxLength);
+  }
+  
+  return desc || '插件';
+}
+
+/**
  * 截断字符串
  */
 export function truncate(str: string, maxLength: number, suffix = "..."): string {
