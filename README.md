@@ -116,16 +116,16 @@ bun run dev
 
 | 插件 | 命令 | 描述 |
 |------|------|------|
-| **ai** | `ai` | AI 对话助手（支持 OpenAI/Gemini/Claude） |
-| **pansou** | `pan` | 网盘搜索（Telegraph 排版） |
-| **privateguard** | `pglist` | 私聊保护（人机验证） |
-| **speedtest** | `speedtest` | 网速测试 |
-| **calc** | `calc` | 科学计算器（支持复杂表达式） |
-| **hitokoto** | `hitokoto` | 随机一言（来自 hitokoto.cn） |
-| **weather** | `weather` | 天气查询（支持全球城市） |
-| **ip** | `ip` | IP/域名查询（地理位置+ISP） |
-| **crazy4** | `crazy4` | 疯狂星期四文案 |
-| **system** | `update/upgrade/restart/status/logs/sys` | 系统管理（更新/重启/日志） |
+| **[ai](plugins/ai.ts)** | `ai` | AI 对话助手（支持 OpenAI/Gemini/Claude） |
+| **[pansou](plugins/pansou.ts)** | `pan` | 网盘搜索（Telegraph 排版） |
+| **[privateguard](plugins/privateguard.ts)** | `pglist` | 私聊保护（人机验证） |
+| **[speedtest](plugins/speedtest.ts)** | `speedtest` | 网速测试 |
+| **[calc](plugins/calc.ts)** | `calc` | 科学计算器（支持复杂表达式） |
+| **[hitokoto](plugins/hitokoto.ts)** | `hitokoto` | 随机一言（来自 hitokoto.cn） |
+| **[weather](plugins/weather.ts)** | `weather` | 天气查询（支持全球城市） |
+| **[ip](plugins/ip.ts)** | `ip` | IP/域名查询（地理位置+ISP） |
+| **[crazy4](plugins/crazy4.ts)** | `crazy4` | 疯狂星期四文案 |
+| **[system](plugins/system.ts)** | `update/upgrade/restart/status/logs/sys` | 系统管理（更新/重启/日志） |
 
 #### AI 插件子命令
 
