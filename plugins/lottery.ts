@@ -109,6 +109,18 @@ const findRecordByKeyword = (keyword: string): any | null => {
   } catch (error) { return null; }
 };
 
+// 通过抽奖ID查找最新参与记录
+const findRecordByLotteryId = (lotteryId: string): any | null => {
+  try {
+    const database = (db as any).getDB();
+    // 抽奖ID格式类似 UUID，我们查找最近加入且包含该ID文本的记录
+    // 实际匹配是通过消息内容中的ID，但记录里没有存ID，所以查找最近的等待记录
+    return database.query(
+      `SELECT * FROM lottery_records WHERE status = 'joined' ORDER BY joined_at DESC LIMIT 1`
+    ).get() as any | null;
+  } catch (error) { return null; }
+};
+
 const updateLotteryResult = (id: number, result: string, status: string): void => {
   try {
     const database = (db as any).getDB();
@@ -233,14 +245,27 @@ const extractPrize = (text: string): string => {
 };
 
 const checkLotteryResult = (text: string): any => {
-  const resultPatterns = [/开奖.*结果/i, /中奖.*名单/i, /恭喜.*中奖/i, /抽奖.*结束/i, /获奖/i];
+  const resultPatterns = [/开奖/i, /中奖.*名单/i, /恭喜.*中奖/i, /抽奖.*结束/i, /获奖/i, /人数够/i];
   for (const pattern of resultPatterns) {
     if (pattern.test(text)) {
-      const isWinner = /恭喜|中奖|获得者|Winner/i.test(text) && !(/未中奖|没有中奖|谢谢参与/i.test(text));
+      const isWinner = /恭喜|中奖|获得者|Winner|▸/i.test(text) && !(/未中奖|没有中奖|谢谢参与/i.test(text));
       const winnerMatch = text.match(/(?:恭喜|中奖者|获得者)[：:\s@]*([^\n\s,，]+)/i);
-      const prizeMatch = text.match(/(?:奖品|奖励|获得)[：:\s]*([^\n]+)/i);
+      // 匹配 "▸ 用户名 (ID)" 格式
+      const winnerMatch2 = text.match(/▸\s*([^\n(]+)\s*\(/i);
+      const prizeMatch = text.match(/(?:奖品|奖励|获得|中奖信息)[：:\s]*([^\n]+)/i);
+      // 匹配 "奖品名 * 数量" 格式
+      const prizeMatch2 = text.match(/([^\n*]+)\s*\*\s*\d+/i);
       const keywordMatch = text.match(/(?:关键词|口令)[：:\s]*([^\n\s]+)/i);
-      return { isResult: true, isWinner, winnerName: winnerMatch?.[1], prize: prizeMatch?.[1]?.trim(), keyword: keywordMatch?.[1] };
+      // 提取抽奖ID
+      const idMatch = text.match(/抽奖\s*ID[：:]?\s*([0-9a-f-]+)/i);
+      return { 
+        isResult: true, 
+        isWinner, 
+        winnerName: winnerMatch?.[1] || winnerMatch2?.[1]?.trim(), 
+        prize: prizeMatch?.[1]?.trim() || prizeMatch2?.[1]?.trim(), 
+        keyword: keywordMatch?.[1],
+        lotteryId: idMatch?.[1]
+      };
     }
   }
   return { isResult: false };
@@ -287,11 +312,22 @@ const messageHandler = async (msg: Api.Message, client: any): Promise<void> => {
     const resultCheck = checkLotteryResult(text);
     if (resultCheck.isResult) {
       if (isResultProcessed(anyMsg.id)) return;
+      // 先通过关键词查找，如果没有则通过抽奖ID查找
       let record = resultCheck.keyword ? findRecordByKeyword(resultCheck.keyword) : null;
+      if (!record && resultCheck.lotteryId) {
+        record = findRecordByLotteryId(resultCheck.lotteryId);
+      }
+      // 如果没找到特定记录，查找最近的等待开奖记录
+      if (!record) {
+        try {
+          const database = (db as any).getDB();
+          record = database.query(`SELECT * FROM lottery_records WHERE status = 'joined' ORDER BY joined_at DESC LIMIT 1`).get() as any | null;
+        } catch (e) {}
+      }
       const isWinner = resultCheck.isWinner && record !== null;
       if (record) {
         updateLotteryResult(record.id, text.substring(0, 200), isWinner ? "won" : "lost");
-        if (isWinner) await sendWinNotification(client, { ...record, status: "won" });
+        if (isWinner) await sendWinNotification(client, { ...record, prize: resultCheck.prize || record.prize, status: "won" });
       }
       addProcessedResult(anyMsg.id, isWinner, resultCheck.prize, record?.messageId);
       return;
