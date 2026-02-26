@@ -5,6 +5,28 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.4.1] - 2026-02-26
+
+### Fixed
+
+- **plugins/lottery.ts**: 修复数据库表结构，添加缺失的 `chat_id` 字段
+- **plugins/lottery.ts**: 修复超级群组 ID 格式问题，自动添加 `-100` 前缀
+
+## [1.4.0] - 2026-02-26
+
+### Added
+
+- **plugins/lottery.ts**: 🎰 自动抽奖插件 v2.1，支持多群组监控
+  - 新增 `lottadd` 命令添加监控群组
+  - 新增 `lottdel` 命令删除监控群组
+  - 新增 `lotton` / `lottoff` 开启/关闭自动参与
+  - 数据库缓存机制，防止消息被快速编辑丢失内容
+  - 异步处理消息，自动提取关键词并发送
+
+### Changed
+
+- 版本号更新至 1.4.0
+
 ## [1.0.22] - 2026-02-26
 
 ### Fixed

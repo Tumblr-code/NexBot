@@ -62,6 +62,16 @@ const initDB = () => {
   `);
   database.run(`CREATE INDEX IF NOT EXISTS idx_lk_status ON lottery_keywords(status)`);
   
+  // 迁移：检查并添加 chat_id 字段（兼容旧表）
+  try {
+    const cols = database.query(`PRAGMA table_info(lottery_keywords)`).all() as any[];
+    const hasChatId = cols.some(c => c.name === 'chat_id');
+    if (!hasChatId) {
+      database.run(`ALTER TABLE lottery_keywords ADD COLUMN chat_id TEXT NOT NULL DEFAULT ''`);
+      console.log('[lottery] 数据库迁移: 已添加 chat_id 字段');
+    }
+  } catch (e) {}
+  
   // 多群组配置表
   database.run(`
     CREATE TABLE IF NOT EXISTS lottery_groups (
@@ -255,10 +265,15 @@ const sendKeywords = async (client: any) => {
   const keywords = getPendingKeywords();
   for (const item of keywords) {
     try {
-      const peer = await client.getInputEntity(item.chat_id);
+      // 处理群组ID格式（超级群组需要 -100 前缀）
+      let chatId = item.chat_id;
+      if (!chatId.startsWith('-')) {
+        chatId = `-100${chatId}`;
+      }
+      const peer = await client.getInputEntity(chatId);
       await client.sendMessage(peer, { message: item.keyword });
       markKeywordSent(item.id);
-      console.log(`[lottery] 已发送关键词: ${item.keyword} 到 ${item.chat_id}`);
+      console.log(`[lottery] 已发送关键词: ${item.keyword} 到 ${chatId}`);
     } catch (e) {
       console.error(`[lottery] 发送失败:`, e);
     }
