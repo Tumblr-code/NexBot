@@ -1,30 +1,33 @@
 /**
- * 自动抽奖参与插件
- * 监听特定群组的抽奖消息并自动参与
+ * 自动抽奖插件
+ * 监听指定群组的抽奖消息并自动参与
  */
+
 import { Plugin } from "../src/types/index.js";
 import { Api } from "telegram";
-import { fmt } from "../src/utils/context.js";
 import { db } from "../src/utils/database.js";
+import { fmt, escapeHTML } from "../src/utils/context.js";
 
 // Emoji 定义
 const EMOJI = {
   LOTTERY: "🎰",
-  SUCCESS: "✅",
-  ERROR: "❌",
-  STATS: "📊",
-  WAIT: "⏳",
   WIN: "🎉",
   LOST: "😢",
-  GROUP: "👥",
-  BOT: "🤖",
-  NOTIFY: "🔔",
-  DELAY: "⏱️",
-  AUTO: "🔄",
+  WAIT: "⏳",
   PRIZE: "🎁",
+  KEY: "🔑",
   TIME: "📅",
-  INFO: "ℹ️",
+  STATS: "📊",
+  CONFIG: "⚙️",
+  NOTIFY: "🔔",
+  GROUP: "📱",
+  BOT: "🤖",
+  DELAY: "⏱️",
+  AUTO: "🎮",
   ARROW: "→",
+  INFO: "ℹ️",
+  SUCCESS: "✅",
+  ERROR: "❌",
 };
 
 // 默认配置
@@ -158,47 +161,18 @@ const addProcessedResult = (resultMsgId: number, isWinner: boolean, prize?: stri
   } catch (error) {}
 };
 
-// 提取关键词 - 优先匹配中文引号格式
+// 提取关键词
 const extractKeyword = (msg: Api.Message): string | null => {
   const anyMsg = msg as any;
   const text = anyMsg.message || anyMsg.text || "";
   
-  // 优先匹配明确的关键词格式（防止匹配到代码格式的ID）
-  // 新格式：参与关键词：「xxx」 或 『xxx』
-  const match5 = text.match(/参与关键词[：:]\s*[「『]([^」』\n]+)[」』]/);
-  if (match5) return match5[1].trim();
-  
-  // 新格式：关键词：「xxx」 或 『xxx』
-  const match6 = text.match(/关键词[：:]\s*[「『]([^」』\n]+)[」』]/);
-  if (match6) return match6[1].trim();
-  
-  // 通用中文引号格式：「xxx」 或 『xxx』
-  const match7 = text.match(/[「『]([^」』\n]{2,20})[」』]/);
-  if (match7) return match7[1].trim();
-  
-  const match1 = text.match(/回复\s*[`"']?([^`'"\n]+)[`"']?\s*参与/i);
-  if (match1) return match1[1].trim();
-  
-  const match2 = text.match(/关键词[：:]\s*[`"']?([^`'"\n]+)[`"']?/i);
-  if (match2) return match2[1].trim();
-  
-  const match3 = text.match(/口令[：:]\s*[`"']?([^`'"\n]+)[`"']?/i);
-  if (match3) return match3[1].trim();
-  
-  const match4 = text.match(/[`"']([^`'"\n]{2,20})[`"']/);
-  if (match4) return match4[1].trim();
-  
-  // 最后检查 entities，过滤掉UUID格式的ID
   if (anyMsg.entities && Array.isArray(anyMsg.entities)) {
     for (const entity of anyMsg.entities) {
       if (entity.className === "MessageEntityCode" || entity.className === "MessageEntityPre") {
         const start = entity.offset || 0;
         const length = entity.length || 0;
         const keyword = text.substring(start, start + length).trim();
-        // 过滤掉UUID格式的ID
-        if (keyword && keyword.length > 1 && keyword.length < 50 && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(keyword)) {
-          return keyword;
-        }
+        if (keyword && keyword.length > 1 && keyword.length < 50) return keyword;
       }
     }
   }
@@ -211,15 +185,37 @@ const extractKeyword = (msg: Api.Message): string | null => {
     }
   }
   
+  const match1 = text.match(/回复\s*[`"']?([^`"'\n]+)[`"']?\s*参与/i);
+  if (match1) return match1[1].trim();
+  
+  const match2 = text.match(/关键词[：:]\s*[`"']?([^`"'\n]+)[`"']?/i);
+  if (match2) return match2[1].trim();
+  
+  const match3 = text.match(/口令[：:]\s*[`"']?([^`"'\n]+)[`"']?/i);
+  if (match3) return match3[1].trim();
+  
+  const match4 = text.match(/[`"']([^`"'\n]{2,20})[`"']/);
+  if (match4) return match4[1].trim();
+  
+  // 新格式：参与关键词：「xxx」 或 『xxx』
+  const match5 = text.match(/参与关键词[：:]\s*[「『]([^」』\n]+)[」』]/);
+  if (match5) return match5[1].trim();
+  
+  // 新格式：关键词：「xxx」 或 『xxx』
+  const match6 = text.match(/关键词[：:]\s*[「『]([^」』\n]+)[」』]/);
+  if (match6) return match6[1].trim();
+  
+  // 通用中文引号格式：「xxx」 或 『xxx』
+  const match7 = text.match(/[「『]([^」』\n]{2,20})[」』]/);
+  if (match7) return match7[1].trim();
+  
   return null;
 };
 
 const extractPrize = (text: string): string => {
   const patterns = [
-    /奖品[：:]\s*([^
-]+)/i,
-    /奖励[：:]\s*([^
-]+)/i,
+    /奖品[：:]\s*([^\n]+)/i,
+    /奖励[：:]\s*([^\n]+)/i,
     /\*\*([^\n]+?)\*\*/,
     /(\d+\s*(?:USDT|BTC|ETH|代币|红包|现金))/i,
   ];
@@ -231,7 +227,7 @@ const extractPrize = (text: string): string => {
 };
 
 const checkLotteryResult = (text: string): any => {
-  const resultPatterns = [/开奖/i, /中奖.*名单/i, /恭喜.*中奖/i, /抽奖.*结束/i, /获奖/i, /人数够/i, /参与人数/i];
+  const resultPatterns = [/开奖.*结果/i, /中奖.*名单/i, /恭喜.*中奖/i, /抽奖.*结束/i, /获奖/i];
   for (const pattern of resultPatterns) {
     if (pattern.test(text)) {
       const isWinner = /恭喜|中奖|获得者|Winner/i.test(text) && !(/未中奖|没有中奖|谢谢参与/i.test(text));
