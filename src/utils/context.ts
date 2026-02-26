@@ -1,6 +1,28 @@
 import { TelegramClient, Api } from "telegram";
 import { CommandContext, ReplyOptions, Message } from "../types/index.js";
 
+// 自动删除配置
+const AUTO_DELETE_ENABLED = process.env.AUTO_DELETE !== "false"; // 默认开启
+const AUTO_DELETE_DELAY = parseInt(process.env.AUTO_DELETE_DELAY || "60000"); // 默认60秒
+
+// 延迟删除消息的辅助函数
+async function scheduleDelete(
+  client: TelegramClient,
+  chatId: any,
+  messageIds: number[],
+  delay: number = AUTO_DELETE_DELAY
+): Promise<void> {
+  if (!AUTO_DELETE_ENABLED || delay <= 0) return;
+  
+  setTimeout(async () => {
+    try {
+      await client.deleteMessages(chatId, messageIds, { revoke: true });
+    } catch (err) {
+      // 忽略删除错误（消息可能已被删除或过期）
+    }
+  }, delay);
+}
+
 export function createContext(
   client: TelegramClient,
   msg: Message,
@@ -37,15 +59,21 @@ export function createContext(
         silent: options.silent,
         linkPreview: options.disableWebPagePreview === false,
       };
-      // 只有显式设置 replyToMessageId 为数值时才引用回复
-      if (typeof options.replyToMessageId === 'number') {
+      // 处理 replyTo：显式设置 null 表示不引用，其他情况默认引用原消息
+      if (options.replyToMessageId === null) {
+        // 不设置 replyTo，作为独立消息
+      } else if (typeof options.replyToMessageId === 'number') {
         sendOptions.replyTo = Number(options.replyToMessageId);
-      } else if (options.replyToMessageId !== null) {
+      } else {
         // 默认引用原消息
         sendOptions.replyTo = Number(messageId);
       }
-      // replyToMessageId === null 时不设置 replyTo，不引用
-      return await client.sendMessage(target, sendOptions);
+      const sentMsg = await client.sendMessage(target, sendOptions);
+      
+      // 自动删除回复消息
+      scheduleDelete(client, target, [sentMsg.id]);
+      
+      return sentMsg;
     },
 
     async replyHTML(html: string, options: ReplyOptions = {}): Promise<Api.Message> {
@@ -56,10 +84,12 @@ export function createContext(
         silent: options.silent,
         linkPreview: options.disableWebPagePreview === false,
       };
-      // 只有显式设置 replyToMessageId 为数值时才引用回复
-      if (typeof options.replyToMessageId === 'number') {
+      // 处理 replyTo：显式设置 null 表示不引用，其他情况默认引用原消息
+      if (options.replyToMessageId === null) {
+        // 不设置 replyTo
+      } else if (typeof options.replyToMessageId === 'number') {
         sendOptions.replyTo = Number(options.replyToMessageId);
-      } else if (options.replyToMessageId !== null) {
+      } else {
         // 默认引用原消息
         sendOptions.replyTo = Number(messageId);
       }
@@ -67,7 +97,12 @@ export function createContext(
       if (options.replyMarkup) {
         sendOptions.buttons = options.replyMarkup.inlineKeyboard || options.replyMarkup;
       }
-      return await client.sendMessage(target, sendOptions);
+      const sentMsg = await client.sendMessage(target, sendOptions);
+      
+      // 自动删除回复消息
+      scheduleDelete(client, target, [sentMsg.id]);
+      
+      return sentMsg;
     },
 
     async edit(text: string, options: ReplyOptions = {}): Promise<Api.Message> {

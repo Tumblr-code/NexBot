@@ -1002,45 +1002,184 @@ const unblockCommand = async (msg: Api.Message): Promise<void> => {
   }
 };
 
+// 管理命令：查看列表（使用 ctx）
+const listCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const allowedList = Array.from(allowedUsers.entries());
+  const pendingList = Array.from(pendingUsers.entries());
+
+  let userListText = "";
+  if (allowedList.length > 0) {
+    allowedList.forEach(([id, info], index) => {
+      const username = info.username ? `@${info.username}` : "";
+      userListText += `${index + 1}. ${id} ${username}\n`;
+    });
+  } else {
+    userListText += "暂无已验证用户";
+  }
+  
+  let text = "<b>📊 私聊保护统计</b>\n\n";
+  text += `✅ 已验证用户：${allowedList.length} 人\n`;
+  text += `⏳ 验证中用户：${pendingList.length} 人\n\n`;
+  text += `<blockquote expandable>${userListText.trim()}</blockquote>`;
+
+  await ctx.editHTML(text);
+};
+
+// 管理命令：添加白名单（使用 ctx）
+const allowCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const targetId = args[0];
+
+  if (!targetId) {
+    await ctx.editHTML("❌ 请指定用户ID\n用法：<code>.pgallow 用户ID</code>");
+    return;
+  }
+
+  allowedUsers.set(targetId, { verifiedAt: Date.now() });
+  pendingUsers.delete(targetId);
+  saveData();
+
+  await ctx.editHTML(`✅ 用户 <code>${targetId}</code> 已添加到白名单`);
+};
+
+// 管理命令：移除白名单（使用 ctx）
+const removeCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const targetId = args[0];
+
+  if (!targetId) {
+    await ctx.editHTML("❌ 请指定用户ID\n用法：<code>.pgremove 用户ID</code>");
+    return;
+  }
+
+  if (allowedUsers.has(targetId)) {
+    allowedUsers.delete(targetId);
+    saveData();
+    await ctx.editHTML(`✅ 用户 <code>${targetId}</code> 已移出白名单，下次私聊需重新验证`);
+  } else {
+    await ctx.editHTML(`⚠️ 用户 <code>${targetId}</code> 不在白名单中`);
+  }
+};
+
+// 管理命令：重置（使用 ctx）
+const resetCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const allowedCount = allowedUsers.size;
+  const pendingCount = pendingUsers.size;
+  
+  allowedUsers.clear();
+  pendingUsers.clear();
+  saveData();
+  
+  await ctx.editHTML(`🗑️ 数据已重置\n\n已清理 ${allowedCount} 个已验证用户\n已清理 ${pendingCount} 个验证中会话`);
+};
+
+// 切换验证类型命令（使用 ctx）
+const setTypeCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const type = args[0]?.toLowerCase();
+
+  if (!type || (type !== "math" && type !== "click" && type !== "random")) {
+    await ctx.editHTML(`📝 可用验证类型：\n• math - 数学计算\n• click - 顺序点击\n• random - 随机混合\n\n用法：<code>.pgtype math</code>\n当前类型：${CONFIG.VERIFY_TYPE}`);
+    return;
+  }
+
+  CONFIG.VERIFY_TYPE = type as VerifyType;
+  const typeName = type === "math" ? "数学计算" : type === "click" ? "顺序点击" : "随机混合";
+  
+  await ctx.editHTML(`✅ 验证类型已设置为：${typeName}`);
+};
+
+// 查看黑名单命令（使用 ctx）
+const listBlockedCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const blockedList = Array.from(blockedUsers.entries());
+
+  let blockedListText = "";
+  if (blockedList.length > 0) {
+    blockedList.forEach(([id, info], index) => {
+      const username = info.username ? `@${info.username}` : "";
+      const reason = info.reason || "";
+      blockedListText += `${index + 1}. ${id} ${username} (${reason})\n`;
+    });
+  } else {
+    blockedListText += "暂无黑名单用户";
+  }
+
+  let text = "<b>🚫 黑名单列表</b>\n\n";
+  text += `共 ${blockedList.length} 人\n\n`;
+  text += `<blockquote expandable>${blockedListText.trim()}</blockquote>`;
+
+  await ctx.editHTML(text);
+};
+
+// 拉黑用户命令（使用 ctx）
+const blockCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const targetId = args[0];
+
+  if (!targetId) {
+    await ctx.editHTML("❌ 请指定用户ID\n用法：<code>.pgblock 用户ID</code>");
+    return;
+  }
+
+  blockUser(targetId, undefined, "手动拉黑");
+  await ctx.editHTML(`🚫 用户 <code>${targetId}</code> 已被拉黑`);
+};
+
+// 解除拉黑命令（使用 ctx）
+const unblockCommandCtx = async (msg: Api.Message, args: string[], ctx: any): Promise<void> => {
+  const targetId = args[0];
+
+  if (!targetId) {
+    await ctx.editHTML("❌ 请指定用户ID\n用法：<code>.pgunblock 用户ID</code>");
+    return;
+  }
+
+  if (unblockUser(targetId)) {
+    await ctx.editHTML(`✅ 用户 <code>${targetId}</code> 已从黑名单移除`);
+  } else {
+    await ctx.editHTML(`⚠️ 用户 <code>${targetId}</code> 不在黑名单中`);
+  }
+};
+
 class PrivateGuardPlugin extends Plugin {
   name = "privateguard";
-  description = `🛡️ 私聊保护插件
+  description = "🛡️ 私聊保护插件";
+  version = "1.1.0";
 
-功能：陌生人私聊时自动要求完成数学验证，否则消息自动删除
-
-验证方式：
-• 数学计算 - 回复计算结果
-
-工作原理：
-1. 陌生人首次私聊 → 自动删消息 + 发送数学题
-2. 完成验证 → 加入白名单，后续消息正常
-3. 验证失败或超时 → 继续删除消息
-
-管理命令：
-.pglist         - 查看已验证用户
-.pgallow ID     - 添加白名单
-.pgremove ID    - 移除白名单
-.pgreset        - 重置所有数据
-.pgblock ID     - 拉黑用户
-.pgunblock ID   - 解除拉黑
-.pgblocklist    - 查看黑名单
-
-验证规则：
-• 3次失败自动拉黑
-• 3分钟超时自动拉黑
-• 通过后自动删除验证消息
-
-提示：只处理普通用户私聊，机器人和群组不受影响`;
-
-  cmdHandlers = {
-    pglist: listCommand,
-    pgallow: allowCommand,
-    pgremove: removeCommand,
-    pgreset: resetCommand,
-    pgtype: setTypeCommand,
-    pgblock: blockCommand,
-    pgunblock: unblockCommand,
-    pgblocklist: listBlockedCommand,
+  commands = {
+    pglist: {
+      description: "查看已验证用户列表",
+      handler: listCommandCtx,
+    },
+    pgallow: {
+      description: "添加白名单用户",
+      examples: ["pgallow 123456789"],
+      handler: allowCommandCtx,
+    },
+    pgremove: {
+      description: "移除白名单用户",
+      examples: ["pgremove 123456789"],
+      handler: removeCommandCtx,
+    },
+    pgreset: {
+      description: "重置所有数据",
+      handler: resetCommandCtx,
+    },
+    pgtype: {
+      description: "切换验证类型 (math/click/random)",
+      examples: ["pgtype math"],
+      handler: setTypeCommandCtx,
+    },
+    pgblock: {
+      description: "拉黑用户",
+      examples: ["pgblock 123456789"],
+      handler: blockCommandCtx,
+    },
+    pgunblock: {
+      description: "解除拉黑",
+      examples: ["pgunblock 123456789"],
+      handler: unblockCommandCtx,
+    },
+    pgblocklist: {
+      description: "查看黑名单",
+      handler: listBlockedCommandCtx,
+    },
   };
 
   // 监听所有私聊消息

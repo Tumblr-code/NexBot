@@ -367,12 +367,10 @@ async function showMainHelp(msg: any, ctx: any, prefix: string) {
   commandsText += `${copyCmd("id", prefix)} ${EMOJI.ARROW} 查看聊天信息\n`;
   commandsText += `${copyCmd("echo", prefix)} ${EMOJI.ARROW} 回声测试\n\n`;
   
-  // 系统命令
+  // 系统命令（仅内置命令）
   commandsText += fmt.bold(`${EMOJI.SYSTEM} 系统命令`) + "\n";
   commandsText += `${copyCmd("sysinfo", prefix)} ${EMOJI.ARROW} 系统状态\n`;
-  commandsText += `${copyCmd("update", prefix)} ${EMOJI.ARROW} 更新代码\n`;
-  commandsText += `${copyCmd("restart", prefix)} ${EMOJI.ARROW} 重启 Bot\n`;
-  commandsText += `${copyCmd("status", prefix)} ${EMOJI.ARROW} 查看状态\n\n`;
+  commandsText += `${copyCmd("exec", prefix)} ${EMOJI.ARROW} 执行命令\n\n`;
   
   // 扩展插件
   commandsText += fmt.bold(`${EMOJI.EXTEND} 扩展插件`) + "\n";

@@ -7,6 +7,10 @@ import { logger } from "../utils/logger.js";
 import { healthChecker } from "../utils/healthCheck.js";
 import { defaultRateLimiter } from "../utils/rateLimiter.js";
 
+// 自动删除配置
+const AUTO_DELETE_ENABLED = process.env.AUTO_DELETE !== "false"; // 默认开启
+const AUTO_DELETE_DELAY = parseInt(process.env.AUTO_DELETE_DELAY || "60000"); // 默认60秒
+
 export class CommandHandler {
   private client: TelegramClient;
   private prefix: string;
@@ -16,6 +20,19 @@ export class CommandHandler {
     this.client = client;
     this.prefix = process.env.CMD_PREFIX || ".";
     this.devPrefix = "!";
+  }
+
+  // 延迟删除消息的辅助方法
+  private scheduleDelete(chatId: any, messageIds: number[], delay: number = AUTO_DELETE_DELAY): void {
+    if (!AUTO_DELETE_ENABLED || delay <= 0) return;
+    
+    setTimeout(async () => {
+      try {
+        await this.client.deleteMessages(chatId, messageIds, { revoke: true });
+      } catch (err) {
+        // 忽略删除错误（消息可能已被删除或过期）
+      }
+    }, delay);
   }
 
   start(): void {
@@ -84,14 +101,18 @@ export class CommandHandler {
       if (!rateCheck.allowed) {
         try {
           const resetSec = Math.ceil((rateCheck.resetTime - Date.now()) / 1000);
-          await this.client.sendMessage(msg.chatId as any, {
+          const rateMsg = await this.client.sendMessage(msg.chatId as any, {
             message: `⏱️ 请求过于频繁，请 ${resetSec} 秒后再试`,
             replyTo: Number(msg.id),
           });
+          // 限流提示消息也自动删除
+          this.scheduleDelete(msg.chatId as any, [rateMsg.id]);
         } catch (err) {
           logger.error("发送限流消息失败:", err);
         }
         healthChecker.recordCommand(false);
+        // 限流时删除用户的命令消息
+        this.scheduleDelete(msg.chatId as any, [Number(msg.id)]);
         return;
       }
 
@@ -102,6 +123,12 @@ export class CommandHandler {
         
         logger.debug(`命令执行: ${cmdName} [${senderId}]`);
         healthChecker.recordCommand(true);
+        
+        // 命令执行成功后，自动删除用户发送的命令消息
+        const chatId = (msg as any).chatId || (msg as any).peerId?.userId || (msg as any).chat?.id;
+        if (chatId) {
+          this.scheduleDelete(chatId, [Number(msg.id)]);
+        }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "未知错误";
         const errorStack = err instanceof Error ? err.stack : "";
@@ -112,12 +139,20 @@ export class CommandHandler {
         try {
           const chatId = (msg as any).chatId || (msg as any).peerId?.userId;
           if (chatId) {
-            await this.client.sendMessage(chatId, {
+            const errorReply = await this.client.sendMessage(chatId, {
               message: `❌ 命令执行出错: ${errorMsg}`,
             });
+            // 错误消息也自动删除
+            this.scheduleDelete(chatId, [errorReply.id]);
           }
         } catch (sendErr) {
           logger.error("发送错误消息失败:", sendErr);
+        }
+        
+        // 出错时也删除用户的命令消息
+        const chatId = (msg as any).chatId || (msg as any).peerId?.userId || (msg as any).chat?.id;
+        if (chatId) {
+          this.scheduleDelete(chatId, [Number(msg.id)]);
         }
       }
     } catch (err) {

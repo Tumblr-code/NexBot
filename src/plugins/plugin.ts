@@ -153,7 +153,7 @@ const pluginPlugin: Plugin = {
             const installPrefix = `${prefix}plugin install `;
             text += `${EMOJI.TIP} ${fmt.code(installPrefix)} ${EMOJI.ARROW} 点击复制前缀，然后输入插件名`;
             
-            await ctx.replyHTML(text);
+            await ctx.editHTML(text);
             break;
           }
 
@@ -161,15 +161,15 @@ const pluginPlugin: Plugin = {
           case "r": {
             const name = args[1];
             if (!name) {
-              await ctx.reply(`${EMOJI.QUESTION} 请指定插件名称`);
+              await ctx.edit(`${EMOJI.QUESTION} 请指定插件名称`);
               return;
             }
             
             const success = await pluginManager.reloadPlugin(name);
             if (success) {
-              await ctx.reply(`${EMOJI.RELOAD} 插件 ${name} 已重载`);
+              await ctx.edit(`${EMOJI.RELOAD} 插件 ${name} 已重载`);
             } else {
-              await ctx.reply(`${EMOJI.ERROR} 插件 ${name} 重载失败`);
+              await ctx.edit(`${EMOJI.ERROR} 插件 ${name} 重载失败`);
             }
             break;
           }
@@ -177,7 +177,7 @@ const pluginPlugin: Plugin = {
           case "reloadall":
           case "ra": {
             await pluginManager.reloadAll();
-            await ctx.reply(`${EMOJI.RELOAD} 所有插件已重载`);
+            await ctx.edit(`${EMOJI.RELOAD} 所有插件已重载`);
             break;
           }
 
@@ -185,7 +185,7 @@ const pluginPlugin: Plugin = {
           case "i": {
             const name = args[1];
             if (!name) {
-              await ctx.reply(`${EMOJI.QUESTION} 请指定插件名称\n用法: plugin install <名称>`);
+              await ctx.edit(`${EMOJI.QUESTION} 请指定插件名称\n用法: plugin install <名称>`);
               return;
             }
             
@@ -197,13 +197,13 @@ const pluginPlugin: Plugin = {
             
             if (!existsSync(pluginFile)) {
               logger.warn(`插件文件不存在: ${pluginFile}`);
-              await ctx.reply(`${EMOJI.ERROR} 插件 "${name}" 不存在\n使用 "${fmt.code(".plugin list")}" 查看可用插件`);
+              await ctx.edit(`${EMOJI.ERROR} 插件 "${name}" 不存在\n使用 "${fmt.code(".plugin list")}" 查看可用插件`);
               return;
             }
             
             // 检查是否已启用
             if (db.isPluginEnabled(name)) {
-              await ctx.reply(`${EMOJI.WARNING} 插件 "${name}" 已安装`);
+              await ctx.edit(`${EMOJI.WARNING} 插件 "${name}" 已安装`);
               return;
             }
             
@@ -214,7 +214,7 @@ const pluginPlugin: Plugin = {
               const module = await import(importPath);
               
               if (!module.default) {
-                await ctx.reply(`${EMOJI.ERROR} 插件 "${name}" 格式错误: 没有默认导出`);
+                await ctx.edit(`${EMOJI.ERROR} 插件 "${name}" 格式错误: 没有默认导出`);
                 return;
               }
               
@@ -228,11 +228,11 @@ const pluginPlugin: Plugin = {
               
               // 注册插件
               await pluginManager.registerPlugin(module.default, pluginFile, true);
-              await ctx.reply(`${EMOJI.SUCCESS} 插件 "${name}" 安装成功`);
+              await ctx.edit(`${EMOJI.SUCCESS} 插件 "${name}" 安装成功`);
             } catch (err: any) {
               logger.error(`安装插件失败 ${name}:`, err);
               const errorMsg = err?.message || String(err);
-              await ctx.reply(`${EMOJI.ERROR} 插件 "${name}" 加载失败:\n${errorMsg}`);
+              await ctx.edit(`${EMOJI.ERROR} 插件 "${name}" 加载失败:\n${errorMsg}`);
             }
             break;
           }
@@ -266,24 +266,24 @@ const pluginPlugin: Plugin = {
               const alias = args[2];
               const command = args[3];
               if (!alias || !command) {
-                await ctx.reply(`${EMOJI.QUESTION} 用法: plugin alias add <别名> <命令>`);
+                await ctx.edit(`${EMOJI.QUESTION} 用法: plugin alias add <别名> <命令>`);
                 return;
               }
               pluginManager.setAlias(alias, command);
-              await ctx.reply(`${EMOJI.ADD} 别名已设置: ${alias} ${EMOJI.ARROW} ${command}`);
+              await ctx.edit(`${EMOJI.ADD} 别名已设置: ${alias} ${EMOJI.ARROW} ${command}`);
             } else if (action === "remove" || action === "rm") {
               const alias = args[2];
               if (!alias) {
-                await ctx.reply(`${EMOJI.QUESTION} 请指定别名`);
+                await ctx.edit(`${EMOJI.QUESTION} 请指定别名`);
                 return;
               }
               pluginManager.removeAlias(alias);
-              await ctx.reply(`${EMOJI.DELETE} 别名已删除: ${alias}`);
+              await ctx.edit(`${EMOJI.DELETE} 别名已删除: ${alias}`);
             } else {
               const aliases = pluginManager.getAliases();
               
               if (Object.keys(aliases).length === 0) {
-                await ctx.reply(fmt.bold(`${EMOJI.ALIAS} 命令别名`) + "\n\n暂无别名");
+                await ctx.edit(fmt.bold(`${EMOJI.ALIAS} 命令别名`) + "\n\n暂无别名");
                 return;
               }
               
@@ -294,7 +294,7 @@ const pluginPlugin: Plugin = {
               
               let text = fmt.bold(`${EMOJI.ALIAS} 命令别名`) + "\n\n";
               text += aliasListText;
-              await ctx.replyHTML(text);
+              await ctx.editHTML(text);
             }
             break;
           }
@@ -308,7 +308,7 @@ const pluginPlugin: Plugin = {
             text += `${EMOJI.REMOVE} ${prefix}plugin remove <名称> ${EMOJI.ARROW} 卸载插件\n`;
             text += `${EMOJI.RELOAD} ${prefix}plugin reload <名称> ${EMOJI.ARROW} 重载插件\n`;
             text += `${EMOJI.ALIAS} ${prefix}plugin alias ${EMOJI.ARROW} 命令别名管理`;
-            await ctx.reply(text);
+            await ctx.edit(text);
           }
         }
       },
