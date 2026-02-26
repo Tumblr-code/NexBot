@@ -241,11 +241,17 @@ const checkLotteryResult = (text: string): any => {
 };
 
 const sendWinNotification = async (client: any, record: any): Promise<void> => {
-  if (!CONFIG.NOTIFY_USER_ID || !CONFIG.NOTIFY_ON_WIN) return;
+  if (!CONFIG.NOTIFY_ON_WIN) return;
   try {
-    const notifyId = BigInt(CONFIG.NOTIFY_USER_ID);
+    let target: any;
+    if (CONFIG.NOTIFY_USER_ID) {
+      target = BigInt(CONFIG.NOTIFY_USER_ID);
+    } else {
+      // 默认发送给自己（收藏夹）
+      target = "me";
+    }
     const text = `🎉 <b>中奖通知</b>\n\n恭喜您在抽奖中中奖！\n\n🎁 奖品: ${record.prize}\n🔑 关键词: <code>${record.keyword}</code>\n📅 参与时间: ${formatTime(record.joinedAt)}\n\n请及时领取您的奖品！`;
-    await client.sendMessage(notifyId, { message: text, parseMode: "html" });
+    await client.sendMessage(target, { message: text, parseMode: "html" });
   } catch (error) {}
 };
 
@@ -317,12 +323,7 @@ const lotteryPlugin: Plugin = {
   async onInit(client: any): Promise<void> {
     initLotteryTable();
     loadConfig();
-    if (!CONFIG.NOTIFY_USER_ID && client) {
-      try {
-        const me = await client.getMe();
-        if (me?.id) { CONFIG.NOTIFY_USER_ID = me.id.toString(); saveConfig(); }
-      } catch (error) {}
-    }
+    // 不再自动设置 NOTIFY_USER_ID，空值时使用 "me" 发送给自己
   },
 
   async onMessage(msg: Api.Message, client: any): Promise<void> {
@@ -392,7 +393,7 @@ const lotteryPlugin: Plugin = {
         const text = `${EMOJI.LOTTERY} <b>抽奖插件配置</b>\n\n` +
                      `${EMOJI.GROUP} 监听群组: <code>${CONFIG.TARGET_GROUP_ID || "未设置"}</code>\n` +
                      `${EMOJI.BOT} 抽奖机器人: <code>${CONFIG.LOTTERY_BOT_ID || "未设置"}</code>\n` +
-                     `${EMOJI.NOTIFY} 通知用户: <code>${CONFIG.NOTIFY_USER_ID || "未设置"}</code>\n` +
+                     `${EMOJI.NOTIFY} 通知用户: <code>${CONFIG.NOTIFY_USER_ID || "默认(发给自己)"}</code>\n` +
                      `${EMOJI.DELAY} 延迟范围: ${CONFIG.JOIN_DELAY_MIN}-${CONFIG.JOIN_DELAY_MAX}ms\n` +
                      `${EMOJI.AUTO} 自动参与: ${CONFIG.AUTO_JOIN ? "✅ 开启" : "❌ 关闭"}\n` +
                      `${EMOJI.NOTIFY} 中奖通知: ${CONFIG.NOTIFY_ON_WIN ? "✅ 开启" : "❌ 关闭"}`;
