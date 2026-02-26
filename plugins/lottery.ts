@@ -419,8 +419,12 @@ const lotteryPlugin: Plugin = {
                       `${EMOJI.AUTO} <code>auto</code> ${EMOJI.ARROW} 自动参与 (on/off)\n` +
                       `${EMOJI.NOTIFY} <code>notify_win</code> ${EMOJI.ARROW} 中奖通知 (on/off)\n\n` +
                       `<b>示例:</b>\n` +
-                      `${copyCmd("lottset auto off", prefix)}\n` +
-                      `${copyCmd("lottset delay_min 2000", prefix)}`;
+                      `${copyCmd("lottset group 2129702425", prefix)}\n` +
+                      `${copyCmd("lottset bot 6461022460", prefix)}\n` +
+                      `${copyCmd("lottset notify default", prefix)}\n` +
+                      `${copyCmd("lottset delay_min 2000", prefix)}\n` +
+                      `${copyCmd("lottset auto on", prefix)}\n` +
+                      `${copyCmd("lottset notify_win on", prefix)}`;
           await (msg as any).edit({ text: help, parseMode: "html" });
           return;
         }
