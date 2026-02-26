@@ -166,13 +166,43 @@ const extractKeyword = (msg: Api.Message): string | null => {
   const anyMsg = msg as any;
   const text = anyMsg.message || anyMsg.text || "";
   
+  // 优先匹配明确的关键词格式（防止匹配到代码格式的ID）
+  // 1. 参与关键词：「xxx」 或 『xxx』
+  const match1 = text.match(/参与关键词\s*[：:]\s*[「『]([^」』\n]+)[」』]/);
+  if (match1) return match1[1].trim();
+  
+  // 2. 关键词：「xxx」 或 『xxx』
+  const match2 = text.match(/关键词\s*[：:]\s*[「『]([^」』\n]+)[」』]/);
+  if (match2) return match2[1].trim();
+  
+  // 3. 通用中文引号格式：「xxx」 或 『xxx』
+  const match3 = text.match(/[「『]([^」』\n]{2,20})[」』]/);
+  if (match3) return match3[1].trim();
+  
+  // 4. 其他文本格式
+  const match4 = text.match(/回复\s*[`"']?([^`'"\n]+)[`"']?\s*参与/i);
+  if (match4) return match4[1].trim();
+  
+  const match5 = text.match(/关键词\s*[：:]\s*[`"']?([^`'"\n]+)[`"']?/i);
+  if (match5) return match5[1].trim();
+  
+  const match6 = text.match(/口令\s*[：:]\s*[`"']?([^`'"\n]+)[`"']?/i);
+  if (match6) return match6[1].trim();
+  
+  const match7 = text.match(/[`"']([^`'"\n]{2,20})[`"']/);
+  if (match7) return match7[1].trim();
+  
+  // 最后检查 entities，过滤掉UUID格式的ID
   if (anyMsg.entities && Array.isArray(anyMsg.entities)) {
     for (const entity of anyMsg.entities) {
       if (entity.className === "MessageEntityCode" || entity.className === "MessageEntityPre") {
         const start = entity.offset || 0;
         const length = entity.length || 0;
         const keyword = text.substring(start, start + length).trim();
-        if (keyword && keyword.length > 1 && keyword.length < 50) return keyword;
+        // 过滤掉UUID格式的ID（抽奖ID是UUID格式）
+        if (keyword && keyword.length > 1 && keyword.length < 50 && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(keyword)) {
+          return keyword;
+        }
       }
     }
   }
@@ -184,30 +214,6 @@ const extractKeyword = (msg: Api.Message): string | null => {
       }
     }
   }
-  
-  const match1 = text.match(/回复\s*[`"']?([^`"'\n]+)[`"']?\s*参与/i);
-  if (match1) return match1[1].trim();
-  
-  const match2 = text.match(/关键词[：:]\s*[`"']?([^`"'\n]+)[`"']?/i);
-  if (match2) return match2[1].trim();
-  
-  const match3 = text.match(/口令[：:]\s*[`"']?([^`"'\n]+)[`"']?/i);
-  if (match3) return match3[1].trim();
-  
-  const match4 = text.match(/[`"']([^`"'\n]{2,20})[`"']/);
-  if (match4) return match4[1].trim();
-  
-  // 新格式：参与关键词：「xxx」 或 『xxx』
-  const match5 = text.match(/参与关键词[：:]\s*[「『]([^」』\n]+)[」』]/);
-  if (match5) return match5[1].trim();
-  
-  // 新格式：关键词：「xxx」 或 『xxx』
-  const match6 = text.match(/关键词[：:]\s*[「『]([^」』\n]+)[」』]/);
-  if (match6) return match6[1].trim();
-  
-  // 通用中文引号格式：「xxx」 或 『xxx』
-  const match7 = text.match(/[「『]([^」』\n]{2,20})[」』]/);
-  if (match7) return match7[1].trim();
   
   return null;
 };
