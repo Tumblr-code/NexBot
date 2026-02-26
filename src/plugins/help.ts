@@ -385,9 +385,8 @@ async function showMainHelp(msg: any, ctx: any, prefix: string) {
   if (installedPlugins.length > 0) {
     for (const plugin of installedPlugins) {
       const shortDesc = escapeHTML(cleanPluginDescription(plugin.description));
-      // 插件名可点击复制（点击复制 .help <插件名>）
-      const pluginHelpCmd = `${prefix}help ${plugin.name}`;
-      commandsText += `<a href="tg://copy?text=${encodeURIComponent(pluginHelpCmd)}">${plugin.name}</a> ${EMOJI.ARROW} ${shortDesc}\n`;
+      // 插件名做成可点击复制的代码块格式（点击复制插件名）
+      commandsText += `<a href="tg://copy?text=${encodeURIComponent(plugin.name)}">${fmt.code(plugin.name)}</a> ${EMOJI.ARROW} ${shortDesc}\n`;
     }
   }
   commandsText += `${copyCmd("plugin list", prefix)} ${EMOJI.ARROW} 管理插件`;
