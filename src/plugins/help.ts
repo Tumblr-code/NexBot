@@ -128,12 +128,16 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "lottcfg": "查看抽奖插件当前配置",
   "lottconfig": "抽奖配置（lottcfg 别名）",
   "抽奖配置": "抽奖配置（lottcfg 别名）",
-  "lottset": "设置抽奖插件参数（群组/延迟/开关）",
+  "lottset": "设置抽奖插件参数（群组ID BotID）",
   "lottsetting": "抽奖设置（lottset 别名）",
   "抽奖设置": "抽奖设置（lottset 别名）",
   "lottreset": "重置抽奖配置为默认值",
   "lottrestore": "抽奖重置（lottreset 别名）",
   "抽奖重置": "抽奖重置（lottreset 别名）",
+  "lotton": "开启自动参与抽奖",
+  "lottoff": "关闭自动参与抽奖",
+  "lottadd": "添加监控群组（群组ID BotID）",
+  "lottdel": "删除监控群组",
   
   // 私聊保护插件
   "pglist": "查看私聊保护白名单列表",
