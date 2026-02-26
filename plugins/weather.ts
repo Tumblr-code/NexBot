@@ -387,12 +387,19 @@ const weatherPlugin: Plugin = {
           await sharp(Buffer.from(svg)).png().toFile(tmpFile);
           
           try {
-            await ctx.client.sendFile(msg.chatId || msg.peerId, {
+            const sentMsg = await ctx.client.sendFile(msg.chatId || msg.peerId, {
               file: tmpFile,
               caption: `${EMOJI.SUCCESS} <b>${cityData.name}</b> 天气预报`,
               parseMode: "html",
               forceDocument: false,
             });
+            
+            // 60秒后自动删除天气图片
+            setTimeout(async () => {
+              try {
+                await ctx.client.deleteMessages(msg.chatId || msg.peerId, [sentMsg.id], { revoke: true });
+              } catch {}
+            }, 60000);
           } finally {
             try { require('fs').unlinkSync(tmpFile); } catch {}
           }
