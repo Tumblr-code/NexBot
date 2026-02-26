@@ -7,6 +7,10 @@ import { readdirSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { cleanPluginDescription } from "../utils/helpers.js";
 
+// 生成点击复制命令
+const copyCmd = (cmd: string, prefix: string = ".") => 
+  `<a href="tg://copy?text=${encodeURIComponent(prefix + cmd)}">${fmt.code(prefix + cmd)}</a>`;
+
 // 应用Emoji表情
 const EMOJI = {
   PLUGIN: "🔌",
@@ -303,12 +307,13 @@ const pluginPlugin: Plugin = {
             const prefix = process.env.CMD_PREFIX || ".";
             
             let text = fmt.bold(`${EMOJI.PLUGIN} 插件管理`) + "\n\n";
-            text += `${EMOJI.LIST} ${prefix}plugin list ${EMOJI.ARROW} 查看插件列表\n`;
-            text += `${EMOJI.INSTALL} ${prefix}plugin install <名称> ${EMOJI.ARROW} 安装插件\n`;
-            text += `${EMOJI.REMOVE} ${prefix}plugin remove <名称> ${EMOJI.ARROW} 卸载插件\n`;
-            text += `${EMOJI.RELOAD} ${prefix}plugin reload <名称> ${EMOJI.ARROW} 重载插件\n`;
-            text += `${EMOJI.ALIAS} ${prefix}plugin alias ${EMOJI.ARROW} 命令别名管理`;
-            await ctx.edit(text);
+            // 子命令做成可点击复制的格式
+            text += `${copyCmd("plugin list", prefix)} ${EMOJI.ARROW} 查看插件列表\n`;
+            text += `${copyCmd("plugin install <名称>", prefix)} ${EMOJI.ARROW} 安装插件\n`;
+            text += `${copyCmd("plugin remove <名称>", prefix)} ${EMOJI.ARROW} 卸载插件\n`;
+            text += `${copyCmd("plugin reload <名称>", prefix)} ${EMOJI.ARROW} 重载插件\n`;
+            text += `${copyCmd("plugin alias", prefix)} ${EMOJI.ARROW} 命令别名管理`;
+            await ctx.editHTML(text);
           }
         }
       },
