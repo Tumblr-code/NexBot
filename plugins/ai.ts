@@ -1924,7 +1924,7 @@ const help_text = `🔧 ✨ <b>新增功能</b>
 /* ---------- 插件主体 ---------- */
 class AiPlugin extends Plugin {
   name = "NexAI";
-  description = `🤖 智能AI助手\n\n${help_text}`;
+  description = "🤖 智能AI助手 - 兼容 OpenAI/Gemini/Claude/火山等接口，支持对话/搜索/生图/TTS/语音回答";
   cmdHandlers = {
     ai: async (msg: Api.Message) => {
       await Store.init();

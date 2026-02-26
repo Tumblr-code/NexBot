@@ -441,14 +441,10 @@ class PansouPlugin extends Plugin {
 对接 Pansou 网盘搜索服务
 搜索结果以 Telegraph 页面形式展示，排版更美观
 
-<b>用法：</b>
-<code>.pan 关键词</code>
+用法: .pan 关键词
+示例: .pan 复仇者联盟 / .pan 2024
 
-<b>示例：</b>
-<code>.pan 复仇者联盟</code>
-<code>.pan 2024</code>
-
-<b>功能：</b>
+功能:
 • 搜索结果以 Telegraph 页面展示
 • 分类清晰，排版美观
 • 点击直接访问网盘资源
