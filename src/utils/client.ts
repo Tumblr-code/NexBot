@@ -40,10 +40,18 @@ class ClientManager {
     }
 
     try {
+      // 代理设置
+      const proxyUrl = process.env.ALL_PROXY || process.env.all_proxy || "socks5://127.0.0.1:7891";
+      
       this.client = new TelegramClient(this.session, apiId, apiHash, {
         connectionRetries: 5,
-        useWSS: true,
+        useWSS: false,
         systemVersion: "NexBot/1.0",
+        proxy: {
+          ip: "127.0.0.1",
+          port: 7891,
+          socksType: 5,
+        },
       });
 
       await this.client.connect();

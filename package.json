@@ -1,6 +1,6 @@
 {
   "name": "nexbot",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "下一代 Telegram Bot 框架 - 更快、更简单、更稳定",
   "type": "module",
   "main": "src/index.ts",
@@ -21,11 +21,12 @@
   "author": "NexBot Team",
   "license": "MIT",
   "dependencies": {
-    "telegram": "^2.26.22",
-    "dotenv": "^16.4.7",
     "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "lowdb": "^7.0.1",
     "sharp": "^0.33.5",
-    "lowdb": "^7.0.1"
+    "socks-proxy-agent": "^8.0.5",
+    "telegram": "^2.26.22"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",

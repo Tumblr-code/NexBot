@@ -5,6 +5,21 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.5.1] - 2026-02-28
+
+### Fixed
+
+- **src/plugins/plugin.ts**: 修复插件列表显示名称错误的问题
+  - 修复 `extractPluginInfo` 函数，添加插件定义位置检测（支持 `const xxx: Plugin = {}` 和 `class Xxx extends Plugin` 两种格式）
+  - 使用单词边界 `\b` 避免匹配 `short_name` 等非插件名称字段
+  - 修复 weather 插件显示为"北京"、speedtest 插件显示为"Cloudflare"、pansou 插件显示为"PansouSearch" 的问题
+
+### Changed
+
+- **src/utils/client.ts**: 添加 SOCKS5 代理支持
+  - 默认使用 `socks5://127.0.0.1:7891` 代理连接 Telegram
+  - 支持通过 `ALL_PROXY` 环境变量自定义代理地址
+
 ## [1.5.0] - 2026-02-26
 
 ### 🎉 第一个稳定版发布
