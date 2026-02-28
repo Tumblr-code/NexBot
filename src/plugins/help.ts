@@ -89,45 +89,45 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "aistat": "查看 AI 使用统计（aistats 别名）",
   
   // AI config 子命令详细说明
-  "aiconfigstatus": "查看服务商配置状态",
-  "aiconfigadd": "添加服务商配置",
+  "aiconfigstatus": "查看所有服务商配置状态和可用性",
+  "aiconfigadd": "添加新服务商（格式：名称 接口地址 API密钥）",
   "aiconfigupdate": "更新服务商配置",
-  "aiconfigremove": "删除服务商配置",
-  "aiconfiglist": "列出所有服务商",
-  "aiconfigmodel": "列出服务商支持的模型",
+  "aiconfigremove": "删除指定服务商",
+  "aiconfiglist": "列出所有已配置的服务商",
+  "aiconfigmodel": "查看服务商支持的所有模型列表",
   
   // AI model 子命令详细说明
-  "aimodellist": "查看当前模型配置",
-  "aimodeldefault": "清空模型设置恢复默认",
-  "aimodelauto": "自动分配最佳模型",
-  "aimodelchat": "设置对话模型",
-  "aimodelsearch": "设置搜索模型",
-  "aimodelimage": "设置图片生成模型",
-  "aimodeltts": "设置语音合成模型",
+  "aimodellist": "查看当前各功能分配的模型",
+  "aimodeldefault": "清空所有模型设置，使用自动分配",
+  "aimodelauto": "根据服务商自动分配最佳模型",
+  "aimodelchat": "设置对话功能使用的模型（如 gpt-4o, claude-3-sonnet）",
+  "aimodelsearch": "设置搜索功能使用的模型",
+  "aimodelimage": "设置图片生成功能使用的模型（如 dall-e-3）",
+  "aimodeltts": "设置语音合成功能使用的模型",
   
   // AI context 子命令详细说明
-  "aicontexton": "开启上下文记忆",
-  "aicontextoff": "关闭上下文记忆",
-  "aicontextshow": "查看当前上下文",
-  "aicontextdel": "删除上下文",
+  "aicontexton": "开启上下文记忆，支持多轮对话",
+  "aicontextoff": "关闭上下文记忆，每次独立对话",
+  "aicontextshow": "查看当前会话的上下文内容",
+  "aicontextdel": "删除当前会话的上下文记录",
   
   // AI collapse 子命令详细说明
-  "aicollapseon": "开启长消息折叠",
-  "aicollapseoff": "关闭长消息折叠",
-  "aicollapselimit": "设置折叠字数限制",
-  "aicollapselist": "查看折叠设置",
+  "aicollapseon": "开启长消息自动折叠（默认超过2000字）",
+  "aicollapseoff": "关闭长消息折叠，完整显示",
+  "aicollapselimit": "设置折叠字数阈值（默认2000字）",
+  "aicollapselist": "查看当前折叠设置",
   
   // AI telegraph 子命令详细说明
-  "aitelegraphon": "开启 Telegraph 发布",
+  "aitelegraphon": "开启超长回复自动发布到 Telegraph",
   "aitelegraphoff": "关闭 Telegraph 发布",
-  "aitelegraphlimit": "设置发布字数限制",
-  "aitelegraphlist": "查看已发布文章",
-  "aitelegraphdel": "删除已发布文章",
+  "aitelegraphlimit": "设置发布到 Telegraph 的字数阈值",
+  "aitelegraphlist": "查看已发布的 Telegraph 文章列表",
+  "aitelegraphdel": "删除已发布的 Telegraph 文章",
   
   // AI prompt 子命令详细说明
-  "aipromptset": "设置全局 Prompt",
-  "aipromptclear": "清除全局 Prompt",
-  "aipromptshow": "查看当前 Prompt",
+  "aipromptset": "设置全局系统提示词（Prompt）",
+  "aipromptclear": "清除全局系统提示词",
+  "aipromptshow": "查看当前设置的系统提示词",
   
   // 网盘搜索插件
   "pan": "网盘搜索，结果以 Telegraph 页面展示",
@@ -387,7 +387,7 @@ async function showPluginHelp(msg: any, ctx: any, pluginName: string, plugin: an
       detailText += "\n";
     }
     
-    // 对于 cmdHandlers 格式的插件，显示子命令列表
+    // 对于 cmdHandlers 格式的插件，显示子命令列表和详细帮助
     if (cmdHandlers.length > 0) {
       detailText += fmt.bold(`${EMOJI.LIST} 子命令列表:`) + "\n";
       detailText += `<blockquote expandable>\n`;
@@ -401,11 +401,7 @@ async function showPluginHelp(msg: any, ctx: any, pluginName: string, plugin: an
           "collapse on", "collapse off", "collapse limit", "collapse list",
           "telegraph on", "telegraph off", "telegraph limit", "telegraph list", "telegraph del",
           "prompt set", "prompt clear", "prompt show",
-          "timeout",
-          "maxtokens",
-          "preview",
-          "voice",
-          "stats", "stat"
+          "timeout", "maxtokens", "preview", "voice", "stats"
         ]
       };
       
@@ -421,6 +417,41 @@ async function showPluginHelp(msg: any, ctx: any, pluginName: string, plugin: an
       }
       
       detailText += `</blockquote>\n\n`;
+      
+      // 添加快速入门指南
+      if (cmdHandlers.includes("ai")) {
+        detailText += fmt.bold(`${EMOJI.BOOK} 快速入门指南:`) + "\n";
+        detailText += `<blockquote expandable>\n`;
+        detailText += `${fmt.bold("1. 添加 API 服务商")}\n`;
+        detailText += `   ${EMOJI.DOT} 使用 ${copyCmd("ai config add", prefix)} 添加服务商\n`;
+        detailText += `   ${EMOJI.DOT} 格式: 服务商名称 接口地址 API密钥\n`;
+        detailText += `   ${EMOJI.EXAMPLE} 示例: ${copyCmd("ai config add openai https://api.openai.com/v1 sk-xxx", prefix)}\n\n`;
+        detailText += `${fmt.bold("2. 查看和设置模型")}\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai model list", prefix)} - 查看当前模型配置\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai model auto", prefix)} - 自动分配最佳模型\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai model chat gpt-4o", prefix)} - 设置对话模型\n\n`;
+        detailText += `${fmt.bold("3. 开始使用 AI")}\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai 你好", prefix)} - 普通对话\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai search 今天的新闻", prefix)} - 联网搜索\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai image 一只猫", prefix)} - 生成图片\n\n`;
+        detailText += `${fmt.bold("4. 管理上下文")}\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai context on", prefix)} - 开启上下文记忆\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai context show", prefix)} - 查看当前上下文\n`;
+        detailText += `   ${EMOJI.DOT} ${copyCmd("ai context del", prefix)} - 清空上下文\n`;
+        detailText += `</blockquote>\n\n`;
+        
+        detailText += fmt.bold(`${EMOJI.EXAMPLE} 常用命令示例:`) + "\n";
+        detailText += `<blockquote expandable>\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("ai config status", prefix)} - 查看所有服务商状态\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("ai config list", prefix)} - 列出已配置的服务商\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("ai config remove openai", prefix)} - 删除指定服务商\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("ai prompt set 你是专业助手", prefix)} - 设置系统提示词\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("ai timeout 60", prefix)} - 设置超时时间为60秒\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("ai stats", prefix)} - 查看使用统计\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("ais 量子计算最新进展", prefix)} - 快速联网搜索\n`;
+        detailText += `${EMOJI.DOT} ${copyCmd("aii 未来城市", prefix)} - 快速生成图片\n`;
+        detailText += `</blockquote>\n\n`;
+      }
     }
   }
   
