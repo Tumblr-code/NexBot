@@ -78,6 +78,15 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "aitimeout": "设置 AI 请求超时时间",
   "aimaxtokens": "设置 AI 最大输出 Token 数",
   "aipreview": "开启/关闭链接预览",
+  "aihelp": "显示 AI 插件帮助信息",
+  "aichat": "AI 对话聊天（默认模式）",
+  "aisearch": "AI 联网搜索",
+  "aiimage": "AI 图片生成",
+  "aitts": "AI 文本转语音",
+  "aiaudio": "AI 语音对话",
+  "aisearchaudio": "AI 语音搜索",
+  "aicollapse": "设置消息自动折叠阈值",
+  "aistat": "查看 AI 使用统计（aistats 别名）",
   
   // 网盘搜索插件
   "pan": "网盘搜索，结果以 Telegraph 页面展示",
@@ -347,7 +356,10 @@ async function showPluginHelp(msg: any, ctx: any, pluginName: string, plugin: an
         // 检查是否是这个插件的子命令（以插件命令开头）
         for (const handlerCmd of cmdHandlers) {
           if (cmdName.startsWith(handlerCmd) && cmdName !== handlerCmd) {
-            detailText += `${EMOJI.DOT} ${copyCmd(cmdName, prefix)} ${EMOJI.ARROW} ${desc}\n`;
+            // 转换格式：aiconfig -> ai config
+            const subCmd = cmdName.slice(handlerCmd.length);
+            const fullCmd = subCmd ? `${handlerCmd} ${subCmd}` : cmdName;
+            detailText += `${EMOJI.DOT} ${copyCmd(fullCmd, prefix)} ${EMOJI.ARROW} ${desc}\n`;
           }
         }
       }
