@@ -46,23 +46,23 @@ class ClientManager {
       // const proxyPort = parseInt(process.env.PROXY_PORT || "7891");
       // const proxyType = parseInt(process.env.PROXY_TYPE || "5"); // 5=SOCKS5, 4=SOCKS4, 1=HTTP
 
-      const clientOptions: ConstructorParameters<typeof TelegramClient>[2] = {
+      this.client = new TelegramClient(this.session, apiId, apiHash, {
         connectionRetries: 5,
         useWSS: true,
         systemVersion: "NexBot/1.0",
-      };
+      });
 
-      // 如需使用代理，取消以下注释：
-      // if (proxyEnabled) {
-      //   clientOptions.useWSS = false;
-      //   clientOptions.proxy = {
+      // 如需使用代理，将上方代码替换为以下内容：
+      // this.client = new TelegramClient(this.session, apiId, apiHash, {
+      //   connectionRetries: 5,
+      //   useWSS: false,
+      //   systemVersion: "NexBot/1.0",
+      //   proxy: {
       //     ip: proxyHost,
       //     port: proxyPort,
       //     socksType: proxyType,
-      //   };
-      // }
-
-      this.client = new TelegramClient(this.session, apiId, apiHash, clientOptions);
+      //   },
+      // });
 
       await this.client.connect();
       
