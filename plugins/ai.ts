@@ -519,6 +519,7 @@ const footer = async (model: string, extra?: string): Promise<string> => {
     if (data?.hitokoto) {
       return `\n\n<i>${data.hitokoto}</i>`;
     }
+    return `\n\n<i>每日一言</i>`;
   } catch {
     return `\n\n<i>每日一言</i>`;
   }
