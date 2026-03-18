@@ -64,43 +64,73 @@ const WEATHER_INFO: Record<number, { bg: string; accent: string; desc: string }>
 function getWeatherIconSvg(code: number, isDay: number): string {
   const y = 230; // 统一 Y 坐标
   const cloudColor = isDay === 0 ? "#707090" : "#FFFFFF";
-  
+  const sunFill = isDay === 0 ? "#F8F3D6" : "#FFD55A";
+  const sunStroke = isDay === 0 ? "#D9D1A8" : "#FFB347";
+  const moonFill = "#F4F1D5";
+  const moonShadow = "#D6D2B4";
+
+  const sun = (cx: number, cy: number, r: number) => `
+    <g>
+      <circle cx="${cx}" cy="${cy}" r="${r + 10}" fill="rgba(255,255,255,0.10)"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${sunFill}" stroke="${sunStroke}" stroke-width="4"/>
+      <g stroke="${sunStroke}" stroke-width="4" stroke-linecap="round">
+        <line x1="${cx}" y1="${cy - (r + 22)}" x2="${cx}" y2="${cy - (r + 10)}"/>
+        <line x1="${cx}" y1="${cy + (r + 22)}" x2="${cx}" y2="${cy + (r + 10)}"/>
+        <line x1="${cx - (r + 22)}" y1="${cy}" x2="${cx - (r + 10)}" y2="${cy}"/>
+        <line x1="${cx + (r + 22)}" y1="${cy}" x2="${cx + (r + 10)}" y2="${cy}"/>
+        <line x1="${cx - (r + 16)}" y1="${cy - (r + 16)}" x2="${cx - (r + 8)}" y2="${cy - (r + 8)}"/>
+        <line x1="${cx + (r + 16)}" y1="${cy + (r + 16)}" x2="${cx + (r + 8)}" y2="${cy + (r + 8)}"/>
+        <line x1="${cx - (r + 16)}" y1="${cy + (r + 16)}" x2="${cx - (r + 8)}" y2="${cy + (r + 8)}"/>
+        <line x1="${cx + (r + 16)}" y1="${cy - (r + 16)}" x2="${cx + (r + 8)}" y2="${cy - (r + 8)}"/>
+      </g>
+    </g>`;
+
+  const moon = (cx: number, cy: number, r: number) => `
+    <g>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${moonFill}"/>
+      <circle cx="${cx + 14}" cy="${cy - 6}" r="${r - 4}" fill="${moonShadow}" opacity="0.35"/>
+      <circle cx="${cx + 12}" cy="${cy - 2}" r="${r - 8}" fill="${isDay === 0 ? "#1a1a2e" : "#87CEEB"}"/>
+    </g>`;
+
   // 统一云形状，保证视觉中心与画布中心对齐
   const cloud = (fill: string) => `
     <g fill="${fill}" stroke="none">
+      <ellipse cx="0" cy="22" rx="104" ry="18" fill="rgba(255,255,255,0.12)"/>
       <circle cx="-62" cy="-18" r="34"/>
       <circle cx="-8" cy="-42" r="44"/>
       <circle cx="54" cy="-16" r="36"/>
       <rect x="-108" y="-26" width="216" height="58" rx="29"/>
+      <ellipse cx="0" cy="-2" rx="104" ry="32" fill="${fill}"/>
+      <ellipse cx="-16" cy="-26" rx="72" ry="22" fill="rgba(255,255,255,0.14)"/>
+    </g>`;
+
+  const rain = (positions: number[], color: string, width: number, y1: number, y2: number) => `
+    <g stroke="${color}" stroke-width="${width}" stroke-linecap="round">
+      ${positions.map((x) => `<line x1="${x}" y1="${y1}" x2="${x - width * 2}" y2="${y2}"/>`).join("")}
+    </g>`;
+
+  const snow = (flakes: Array<[number, number, number]>) => `
+    <g fill="#FFFFFF">
+      ${flakes.map(([x, yPos, size]) => `<circle cx="${x}" cy="${yPos}" r="${size}"/>`).join("")}
     </g>`;
   
   // 晴朗 - 太阳
   if (code === 0) {
     return `<g transform="translate(300,${y})">
-      <circle cx="0" cy="0" r="45" fill="#FFD700"/>
-      <g stroke="#FFA500" stroke-width="5" stroke-linecap="round">
-        <line x1="0" y1="-65" x2="0" y2="-52"/>
-        <line x1="0" y1="65" x2="0" y2="52"/>
-        <line x1="-65" y1="0" x2="-52" y2="0"/>
-        <line x1="65" y1="0" x2="52" y2="0"/>
-        <line x1="-46" y1="-46" x2="-37" y2="-37"/>
-        <line x1="46" y1="46" x2="37" y2="37"/>
-        <line x1="-46" y1="46" x2="-37" y2="37"/>
-        <line x1="46" y1="-46" x2="37" y2="-37"/>
-      </g>
+      ${isDay === 0 ? moon(0, 0, 46) : sun(0, 0, 42)}
     </g>`;
   }
   // 大部晴朗
   if (code === 1) {
     return `<g transform="translate(300,${y})">
-      <circle cx="-35" cy="-35" r="35" fill="#FFD700"/>
+      ${isDay === 0 ? moon(-26, -40, 30) : sun(-28, -40, 28)}
       ${cloud("#F0F8FF")}
     </g>`;
   }
   // 多云
   if (code === 2) {
     return `<g transform="translate(300,${y})">
-      <circle cx="-45" cy="-45" r="25" fill="#FFD700" opacity="0.6"/>
+      ${isDay === 0 ? moon(-42, -42, 22) : sun(-42, -42, 20)}
       ${cloud(cloudColor)}
     </g>`;
   }
@@ -122,87 +152,50 @@ function getWeatherIconSvg(code: number, isDay: number): string {
   if (code === 51 || code === 61) {
     return `<g transform="translate(300,${y})">
       ${cloud("#C0E0F8")}
-      <g stroke="#60A0D0" stroke-width="3" stroke-linecap="round">
-        <line x1="-52" y1="15" x2="-58" y2="36"/>
-        <line x1="0" y1="18" x2="-6" y2="39"/>
-        <line x1="52" y1="15" x2="46" y2="36"/>
-      </g>
+      ${rain([-52, 0, 52], "#60A0D0", 3, 15, 36)}
     </g>`;
   }
   // 中雨
   if (code === 63) {
     return `<g transform="translate(300,${y})">
       ${cloud("#A0D0F8")}
-      <g stroke="#4090D0" stroke-width="4" stroke-linecap="round">
-        <line x1="-72" y1="10" x2="-80" y2="46"/>
-        <line x1="-24" y1="10" x2="-32" y2="46"/>
-        <line x1="24" y1="10" x2="16" y2="46"/>
-        <line x1="72" y1="10" x2="64" y2="46"/>
-      </g>
+      ${rain([-72, -24, 24, 72], "#4090D0", 4, 10, 46)}
     </g>`;
   }
   // 大雨
   if (code === 65) {
     return `<g transform="translate(300,${y})">
       ${cloud("#80C0F8")}
-      <g stroke="#2070C0" stroke-width="5" stroke-linecap="round">
-        <line x1="-82" y1="10" x2="-92" y2="56"/>
-        <line x1="-41" y1="10" x2="-51" y2="56"/>
-        <line x1="0" y1="10" x2="-10" y2="56"/>
-        <line x1="41" y1="10" x2="31" y2="56"/>
-        <line x1="82" y1="10" x2="72" y2="56"/>
-      </g>
+      ${rain([-82, -41, 0, 41, 82], "#2070C0", 5, 10, 56)}
     </g>`;
   }
   // 小雪
   if (code === 71) {
     return `<g transform="translate(300,${y})">
       ${cloud("#E8F8FF")}
-      <g fill="#FFFFFF">
-        <circle cx="-54" cy="25" r="5"/>
-        <circle cx="0" cy="40" r="5"/>
-        <circle cx="54" cy="25" r="5"/>
-      </g>
+      ${snow([[-54, 25, 5], [0, 40, 5], [54, 25, 5]])}
     </g>`;
   }
   // 中雪
   if (code === 73) {
     return `<g transform="translate(300,${y})">
       ${cloud("#D8F0FF")}
-      <g fill="#FFFFFF">
-        <rect x="-70" y="20" width="10" height="10" rx="2"/>
-        <rect x="-25" y="35" width="10" height="10" rx="2"/>
-        <rect x="20" y="20" width="10" height="10" rx="2"/>
-        <rect x="-47" y="50" width="10" height="10" rx="2"/>
-        <rect x="3" y="50" width="10" height="10" rx="2"/>
-      </g>
+      ${snow([[-70, 24, 5], [-25, 39, 5], [20, 24, 5], [-47, 54, 5], [3, 54, 5]])}
     </g>`;
   }
   // 大雪
   if (code === 75) {
     return `<g transform="translate(300,${y})">
       ${cloud("#C8E8FF")}
-      <g fill="#FFFFFF">
-        <rect x="-84" y="20" width="12" height="12" rx="2"/>
-        <rect x="-36" y="35" width="12" height="12" rx="2"/>
-        <rect x="12" y="20" width="12" height="12" rx="2"/>
-        <rect x="60" y="35" width="12" height="12" rx="2"/>
-        <rect x="-60" y="55" width="12" height="12" rx="2"/>
-        <rect x="-6" y="55" width="12" height="12" rx="2"/>
-        <rect x="48" y="55" width="12" height="12" rx="2"/>
-      </g>
+      ${snow([[-84, 24, 6], [-36, 39, 6], [12, 24, 6], [60, 39, 6], [-60, 58, 6], [-6, 58, 6], [48, 58, 6]])}
     </g>`;
   }
   // 雷雨
   if (code === 95) {
     return `<g transform="translate(300,${y})">
       ${cloud("#606080")}
-      <polygon points="-15,15 -25,45 -10,45 -20,75 10,35 -5,35" fill="#FFD700"/>
-      <g stroke="#87CEFA" stroke-width="4" stroke-linecap="round">
-        <line x1="-50" y1="50" x2="-60" y2="80"/>
-        <line x1="0" y1="50" x2="-10" y2="80"/>
-        <line x1="50" y1="50" x2="40" y2="80"/>
-      </g>
+      <polygon points="-10,12 -28,48 -8,48 -22,82 18,30 -2,30" fill="#FFD700"/>
+      ${rain([-58, 54], "#87CEFA", 4, 48, 80)}
     </g>`;
   }
   // 默认
