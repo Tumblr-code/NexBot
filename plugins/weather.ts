@@ -223,6 +223,93 @@ function getWindDir(degrees: number): string {
   return dirs[Math.round(degrees / 45) % 8];
 }
 
+function getWeatherBackgroundSvg(weatherCode: number, isDay: number): string {
+  const stars = `
+    <g fill="rgba(255,255,255,0.9)">
+      <circle cx="86" cy="94" r="2.2"/>
+      <circle cx="154" cy="66" r="1.8"/>
+      <circle cx="228" cy="124" r="1.6"/>
+      <circle cx="482" cy="92" r="2.0"/>
+      <circle cx="540" cy="148" r="1.7"/>
+      <circle cx="428" cy="56" r="1.5"/>
+    </g>`;
+
+  if (isDay === 0) {
+    return `
+      <circle cx="500" cy="108" r="108" fill="rgba(255,255,255,0.06)"/>
+      <circle cx="474" cy="88" r="34" fill="rgba(255,255,220,0.10)"/>
+      ${stars}
+    `;
+  }
+
+  if (weatherCode === 0) {
+    return `
+      <circle cx="496" cy="110" r="118" fill="rgba(255,255,255,0.14)"/>
+      <circle cx="504" cy="102" r="82" fill="rgba(255,221,87,0.22)"/>
+      <circle cx="108" cy="690" r="148" fill="rgba(255,255,255,0.08)"/>
+    `;
+  }
+
+  if (weatherCode === 1 || weatherCode === 2 || weatherCode === 3 || weatherCode === 45) {
+    return `
+      <ellipse cx="472" cy="118" rx="138" ry="74" fill="rgba(255,255,255,0.10)"/>
+      <ellipse cx="420" cy="148" rx="96" ry="48" fill="rgba(255,255,255,0.08)"/>
+      <ellipse cx="140" cy="706" rx="166" ry="86" fill="rgba(255,255,255,0.05)"/>
+    `;
+  }
+
+  if (weatherCode === 51 || weatherCode === 61 || weatherCode === 63 || weatherCode === 65) {
+    return `
+      <ellipse cx="482" cy="114" rx="132" ry="72" fill="rgba(255,255,255,0.09)"/>
+      <g stroke="rgba(255,255,255,0.14)" stroke-width="3" stroke-linecap="round">
+        <line x1="80" y1="120" x2="58" y2="182"/>
+        <line x1="146" y1="82" x2="126" y2="142"/>
+        <line x1="232" y1="116" x2="212" y2="178"/>
+        <line x1="356" y1="72" x2="336" y2="134"/>
+        <line x1="448" y1="128" x2="428" y2="190"/>
+        <line x1="534" y1="96" x2="514" y2="158"/>
+      </g>
+      <circle cx="108" cy="706" r="142" fill="rgba(255,255,255,0.05)"/>
+    `;
+  }
+
+  if (weatherCode === 71 || weatherCode === 73 || weatherCode === 75) {
+    return `
+      <ellipse cx="486" cy="112" rx="124" ry="68" fill="rgba(255,255,255,0.11)"/>
+      <g fill="rgba(255,255,255,0.35)">
+        <circle cx="78" cy="122" r="4"/>
+        <circle cx="144" cy="92" r="3.4"/>
+        <circle cx="224" cy="144" r="4.2"/>
+        <circle cx="310" cy="88" r="3.8"/>
+        <circle cx="396" cy="130" r="4"/>
+        <circle cx="492" cy="82" r="3.6"/>
+        <circle cx="548" cy="152" r="4.1"/>
+      </g>
+      <circle cx="96" cy="706" r="144" fill="rgba(255,255,255,0.08)"/>
+    `;
+  }
+
+  if (weatherCode === 95) {
+    return `
+      <ellipse cx="484" cy="118" rx="136" ry="76" fill="rgba(255,255,255,0.07)"/>
+      <path d="M470 58 L438 132 L466 132 L438 200 L506 108 L474 108 Z" fill="rgba(255,220,120,0.18)"/>
+      <g stroke="rgba(255,255,255,0.11)" stroke-width="3" stroke-linecap="round">
+        <line x1="126" y1="108" x2="104" y2="176"/>
+        <line x1="236" y1="82" x2="214" y2="150"/>
+        <line x1="336" y1="128" x2="314" y2="196"/>
+        <line x1="530" y1="116" x2="508" y2="184"/>
+      </g>
+      <circle cx="98" cy="706" r="148" fill="rgba(255,255,255,0.04)"/>
+    `;
+  }
+
+  return `
+    <circle cx="500" cy="110" r="96" fill="rgba(255,255,255,0.10)"/>
+    <circle cx="90" cy="715" r="138" fill="rgba(255,255,255,0.06)"/>
+    <circle cx="520" cy="680" r="74" fill="rgba(255,255,255,0.05)"/>
+  `;
+}
+
 // 生成天气海报 SVG - 中文
 function generateWeatherPoster(
   cityName: string,
@@ -271,9 +358,7 @@ function generateWeatherPoster(
   </defs>
   
   <rect width="600" height="800" fill="url(#bg)"/>
-  <circle cx="500" cy="110" r="96" fill="rgba(255,255,255,0.10)"/>
-  <circle cx="90" cy="715" r="138" fill="rgba(255,255,255,0.06)"/>
-  <circle cx="520" cy="680" r="74" fill="rgba(255,255,255,0.05)"/>
+  ${getWeatherBackgroundSvg(weatherCode, isDay)}
   <rect x="44" y="332" width="512" height="396" rx="34" fill="url(#glass)" stroke="rgba(255,255,255,0.20)" stroke-width="1.5" filter="url(#softShadow)"/>
   ${getWeatherIconSvg(weatherCode, isDay)}
   
