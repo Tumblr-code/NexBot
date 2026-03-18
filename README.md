@@ -34,8 +34,12 @@
 ### 1. 安装 Bun
 
 ```bash
+sudo apt update
+sudo apt install -y unzip fontconfig fonts-noto-cjk
 curl -fsSL https://bun.sh/install | bash
 ```
+
+如果是 Debian/Ubuntu 以外的 Linux 发行版，也请确保系统安装了中文字体与 `fontconfig`，否则 `weather` 插件生成的天气海报可能出现中文乱码、方块字或文字错位。
 
 ### 2. 克隆项目
 
@@ -191,6 +195,16 @@ db.addSudo(userId)           // 添加 sudo 权限
 | `LOG_LEVEL` | 日志级别 | `info` |
 | `ENABLE_SHELL_EXEC` | 启用 shell 执行 | `true` |
 | `SHELL_TIMEOUT` | shell 超时时间 | `30000` |
+
+### Linux 字体依赖
+
+`weather` 插件会通过 `sharp` 把 SVG 渲染成 PNG。生产环境如果没有中文字体，图片中的中文标题、天气描述、湿度/风向等文字可能显示成乱码、方块或排版错乱。
+
+推荐安装：
+
+```bash
+sudo apt install -y fontconfig fonts-noto-cjk
+```
 
 ## 📁 项目结构
 

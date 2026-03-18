@@ -13,6 +13,8 @@
 
 **Linux/macOS:**
 ```bash
+sudo apt update
+sudo apt install -y unzip curl fontconfig fonts-noto-cjk
 curl -fsSL https://bun.sh/install | bash
 ```
 
@@ -25,6 +27,8 @@ powershell -c "irm bun.sh/install.ps1 | iex"
 ```bash
 bun --version
 ```
+
+如果是 Linux 服务器，建议在这一步一起安装 `fontconfig` 和中文字体包。`weather` 插件生成天气海报时依赖系统字体，缺少中文字体会导致图片里的中文变成乱码、方块或排版错位。
 
 ### 2. 获取 NexBot
 
@@ -216,6 +220,11 @@ rm -rf ~/.local/share/nexbot
 - 检查日志 `logs/nexbot-*.log`
 - 确认命令前缀正确
 - 检查是否有 sudo 权限
+
+**问题**: `weather` 插件图片中文乱码 / 文字错位  
+**解决**:
+- 安装字体依赖：`apt install -y fontconfig fonts-noto-cjk`
+- 安装后重启服务：`systemctl restart nexbot` 或重新执行 `bun start`
 
 **问题**: 插件加载失败  
 **解决**: 

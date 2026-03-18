@@ -6,6 +6,18 @@ import { Plugin } from "../src/types/index.js";
 import axios from "axios";
 import sharp from "sharp";
 
+const SVG_FONT_FAMILY = [
+  "Noto Sans CJK SC",
+  "Noto Sans SC",
+  "WenQuanYi Micro Hei",
+  "Microsoft YaHei",
+  "PingFang SC",
+  "Heiti SC",
+  "Source Han Sans SC",
+  "Arial",
+  "sans-serif",
+].join(", ");
+
 const EMOJI = {
   SUN: "☀️", CLOUD: "☁️", CLOUD_SUN: "⛅", CLOUD_RAIN: "🌧️",
   THERMOMETER: "🌡️", DROPLET: "💧", WIND: "🌬️", EYE: "👁️",
@@ -198,6 +210,15 @@ function getWeatherInfo(code: number) {
   return WEATHER_INFO[code] || { bg: "#87CEEB", accent: "#4682B4", desc: "未知" };
 }
 
+function escapeSvgText(value: string | number): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 function getWindDir(degrees: number): string {
   const dirs = ["北", "东北", "东", "东南", "南", "西南", "西", "西北"];
   return dirs[Math.round(degrees / 45) % 8];
@@ -224,6 +245,10 @@ function generateWeatherPoster(
   const info = getWeatherInfo(weatherCode);
   const textColor = "#FFFFFF";
   const subTextColor = "rgba(255,255,255,0.85)";
+  const safeCityName = escapeSvgText(cityName);
+  const safeCountry = escapeSvgText(country);
+  const safeDesc = escapeSvgText(info.desc);
+  const safeWindDir = escapeSvgText(windDir);
   
   const bgColor = isDay === 0 ? "#1a1a2e" : info.bg;
   const accentColor = isDay === 0 ? "#4a4a6a" : info.accent;
@@ -243,29 +268,30 @@ function generateWeatherPoster(
   <rect width="600" height="800" fill="url(#bg)"/>
   <circle cx="500" cy="150" r="80" fill="rgba(255,255,255,0.1)"/>
   <circle cx="100" cy="700" r="120" fill="rgba(255,255,255,0.05)"/>
+  ${getWeatherIconSvg(weatherCode, isDay)}
   
-  <text x="300" y="90" font-family="Arial, sans-serif" font-size="52" font-weight="bold" 
-        fill="${textColor}" text-anchor="middle" filter="url(#shadow)">${cityName}</text>
-  <text x="300" y="130" font-family="Arial, sans-serif" font-size="24" 
-        fill="${subTextColor}" text-anchor="middle">${country}</text>
+  <text x="300" y="90" font-family="${SVG_FONT_FAMILY}" font-size="52" font-weight="bold" 
+        fill="${textColor}" text-anchor="middle" filter="url(#shadow)">${safeCityName}</text>
+  <text x="300" y="130" font-family="${SVG_FONT_FAMILY}" font-size="24" 
+        fill="${subTextColor}" text-anchor="middle">${safeCountry}</text>
   
-  <text x="300" y="280" font-family="Arial, sans-serif" font-size="48" font-weight="bold"
-        fill="${textColor}" text-anchor="middle">${info.desc}</text>
+  <text x="300" y="280" font-family="${SVG_FONT_FAMILY}" font-size="48" font-weight="bold"
+        fill="${textColor}" text-anchor="middle">${safeDesc}</text>
   
-  <text x="300" y="430" font-family="Arial, sans-serif" font-size="100" font-weight="bold" 
+  <text x="300" y="430" font-family="${SVG_FONT_FAMILY}" font-size="100" font-weight="bold" 
         fill="${textColor}" text-anchor="middle" filter="url(#shadow)">${Math.round(temp)}°C</text>
-  <text x="300" y="475" font-family="Arial, sans-serif" font-size="24" 
+  <text x="300" y="475" font-family="${SVG_FONT_FAMILY}" font-size="24" 
         fill="${subTextColor}" text-anchor="middle">体感 ${Math.round(feelsLike)}°C</text>
   
   <line x1="50" y1="520" x2="550" y2="520" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
   
-  <g font-family="Arial, sans-serif" fill="${subTextColor}" font-size="18">
+  <g font-family="${SVG_FONT_FAMILY}" fill="${subTextColor}" font-size="18">
     <text x="100" y="570" text-anchor="middle">湿度</text>
     <text x="300" y="570" text-anchor="middle">风向</text>
     <text x="500" y="570" text-anchor="middle">气压</text>
     
     <text x="100" y="600" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${humidity}%</text>
-    <text x="300" y="600" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${windDir} ${windSpeed}km/h</text>
+    <text x="300" y="600" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${safeWindDir} ${windSpeed}km/h</text>
     <text x="500" y="600" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${Math.round(pressure)}hPa</text>
     
     <text x="150" y="660" text-anchor="middle">能见度</text>
@@ -277,12 +303,12 @@ function generateWeatherPoster(
     <text x="450" y="690" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${Math.round(low)}°</text>
   </g>
   
-  <g font-family="Arial, sans-serif" fill="${subTextColor}" font-size="20">
+  <g font-family="${SVG_FONT_FAMILY}" fill="${subTextColor}" font-size="20">
     <text x="200" y="750" text-anchor="middle">日出 ${sunrise}</text>
     <text x="400" y="750" text-anchor="middle">日落 ${sunset}</text>
   </g>
   
-  <text x="300" y="790" font-family="Arial, sans-serif" font-size="14" 
+  <text x="300" y="790" font-family="${SVG_FONT_FAMILY}" font-size="14" 
         fill="${subTextColor}" text-anchor="middle">NexBot 天气</text>
 </svg>`;
 }

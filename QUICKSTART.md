@@ -5,6 +5,8 @@
 ## 1. 安装 Bun (30 秒)
 
 ```bash
+sudo apt update
+sudo apt install -y unzip fontconfig fonts-noto-cjk
 curl -fsSL https://bun.sh/install | bash
 ```
 
@@ -145,6 +147,14 @@ A: 检查命令前缀，开发模式用 `!`，生产模式用 `.`
 ### Q: 插件加载失败？
 
 A: 检查插件语法，查看日志 `logs/nexbot-*.log`
+
+### Q: weather 图片里的中文是乱码/方块字？
+
+A: Linux 服务器需要先安装中文字体：
+
+```bash
+sudo apt install -y fontconfig fonts-noto-cjk
+```
 
 ## 获取帮助
 
