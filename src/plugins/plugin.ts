@@ -1,10 +1,11 @@
 import { Plugin } from "../types/index.js";
-import { pluginManager } from "../core/pluginManager.js";
+import { pluginManager, getPrimaryPrefix } from "../core/pluginManager.js";
 import { db } from "../utils/database.js";
 import { fmt, escapeHTML } from "../utils/context.js";
 import { logger } from "../utils/logger.js";
 import { readdirSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { pathToFileURL } from "url";
 import { cleanPluginDescription } from "../utils/helpers.js";
 
 // 生成点击复制命令
@@ -46,6 +47,25 @@ interface PluginInfo {
   installed: boolean;
 }
 
+function resolvePluginFile(baseDir: string, name: string): string | null {
+  const candidates = [`${name}.ts`, `${name}.js`];
+
+  for (const candidate of candidates) {
+    const filePath = join(baseDir, candidate);
+    if (existsSync(filePath)) {
+      return filePath;
+    }
+  }
+
+  return null;
+}
+
+async function importPluginFile(filePath: string) {
+  const fileUrl = pathToFileURL(filePath);
+  fileUrl.searchParams.set("t", Date.now().toString());
+  return import(fileUrl.href);
+}
+
 const pluginPlugin: Plugin = {
   name: "plugin",
   version: "1.0.0",
@@ -64,7 +84,7 @@ const pluginPlugin: Plugin = {
         switch (subCmd) {
           case "list":
           case "ls": {
-            const prefix = process.env.CMD_PREFIX || ".";
+            const prefix = getPrimaryPrefix();
             
             // 扫描本地插件目录
             const pluginsDir = join(process.cwd(), "plugins");
@@ -81,20 +101,22 @@ const pluginPlugin: Plugin = {
                   // 读取文件内容提取信息
                   const content = readFileSync(pluginPath, "utf-8");
                   const info = extractPluginInfo(content, name);
-                  info.installed = db.isPluginEnabled(name);
+                  info.installed =
+                    db.isPluginEnabled(info.name) || db.isPluginEnabled(name);
                   availablePlugins.push(info);
                 } catch (err) {
                   logger.warn(`解析插件 ${name} 信息失败`);
                 }
               }
             }
+            availablePlugins.sort((a, b) => a.name.localeCompare(b.name));
             
             // 获取已安装的内置插件
             const installedPlugins = pluginManager.getAllPlugins();
             const notInstalled = availablePlugins.filter(p => !p.installed);
             const externalInstalled = installedPlugins.filter(p => 
               !['help', 'plugin', 'debug', 'exec', 'sysinfo'].includes(p.name)
-            );
+            ).sort((a, b) => a.name.localeCompare(b.name));
             
             // 构建消息
             let text = fmt.bold(`${EMOJI.PLUGIN} 插件中心`) + "\n";
@@ -195,27 +217,21 @@ const pluginPlugin: Plugin = {
             
             // 检查插件文件是否存在
             const pluginsDir = join(process.cwd(), "plugins");
-            const pluginFile = join(pluginsDir, `${name}.ts`);
+            const pluginFile = resolvePluginFile(pluginsDir, name);
             
-            logger.info(`尝试安装插件: ${name}, 文件路径: ${pluginFile}`);
+            logger.info(`尝试安装插件: ${name}, 文件路径: ${pluginFile || "(未找到)"}`);
             
-            if (!existsSync(pluginFile)) {
-              logger.warn(`插件文件不存在: ${pluginFile}`);
-              await ctx.edit(`${EMOJI.ERROR} 插件 "${name}" 不存在\n使用 "${fmt.code(".plugin list")}" 查看可用插件`);
-              return;
-            }
-            
-            // 检查是否已启用
-            if (db.isPluginEnabled(name)) {
-              await ctx.edit(`${EMOJI.WARNING} 插件 "${name}" 已安装`);
+            if (!pluginFile) {
+              logger.warn(`插件文件不存在: ${name}`);
+              await ctx.edit(
+                `${EMOJI.ERROR} 插件 "${name}" 不存在\n使用 "${fmt.code(`${getPrimaryPrefix()}plugin list`)}" 查看可用插件`
+              );
               return;
             }
             
             // 尝试加载插件（先加载再启用，避免加载失败也标记为启用）
             try {
-              const importPath = `../../plugins/${name}.ts`;
-              logger.info(`导入插件: ${importPath}`);
-              const module = await import(importPath);
+              const module = await importPluginFile(pluginFile);
               
               if (!module.default) {
                 await ctx.edit(`${EMOJI.ERROR} 插件 "${name}" 格式错误: 没有默认导出`);
@@ -226,9 +242,16 @@ const pluginPlugin: Plugin = {
               if (!module.default.name) {
                 logger.warn(`插件 ${name} 没有 name 属性`);
               }
+
+              const pluginName = module.default.name || name;
+
+              if (db.isPluginEnabled(name) || db.isPluginEnabled(pluginName)) {
+                await ctx.edit(`${EMOJI.WARNING} 插件 "${name}" 已安装`);
+                return;
+              }
               
               // 启用插件（保存到数据库）
-              db.enablePlugin(name);
+              db.enablePlugin(pluginName);
               
               // 注册插件
               await pluginManager.registerPlugin(module.default, pluginFile, true);
@@ -249,16 +272,19 @@ const pluginPlugin: Plugin = {
               await ctx.reply(`${EMOJI.QUESTION} 请指定插件名称\n用法: plugin remove <名称>`);
               return;
             }
+
+            const targetPlugin = pluginManager.getPlugin(name);
+            const targetName = targetPlugin?.name || name;
             
             // 检查插件是否已启用
-            if (!db.isPluginEnabled(name)) {
+            if (!db.isPluginEnabled(targetName)) {
               await ctx.reply(`${EMOJI.WARNING} 插件 "${name}" 未安装`);
               return;
             }
             
             // 卸载插件
-            await pluginManager.unregisterPlugin(name);
-            db.disablePlugin(name);
+            await pluginManager.unregisterPlugin(targetName);
+            db.disablePlugin(targetName);
             await ctx.reply(`${EMOJI.REMOVE} 插件 "${name}" 已卸载`);
             break;
           }
@@ -304,7 +330,7 @@ const pluginPlugin: Plugin = {
           }
 
           default: {
-            const prefix = process.env.CMD_PREFIX || ".";
+            const prefix = getPrimaryPrefix();
             
             let text = fmt.bold(`${EMOJI.PLUGIN} 插件管理`) + "\n\n";
             // 子命令做成可点击复制的格式
@@ -371,9 +397,13 @@ function extractPluginInfo(content: string, defaultName: string): PluginInfo {
   if (authorMatch) info.author = authorMatch[1];
   
   // 提取命令（从 cmdHandlers 或 commands）
-  const cmdHandlerMatch = pluginContent.match(/cmdHandlers\s*=\s*\{([^}]+)\}/s);
+  const cmdHandlerMatch = pluginContent.match(
+    /cmdHandlers\s*(?:=|:)\s*\{([\s\S]*?)^\s{2}\}[,;]?/m
+  );
   if (cmdHandlerMatch) {
-    const cmdMatches = cmdHandlerMatch[1].matchAll(/(\w+)\s*:/g);
+    const cmdMatches = cmdHandlerMatch[1].matchAll(
+      /^\s{4}["'`]?([^"'`\s:]+)["'`]?\s*:/gm
+    );
     for (const match of cmdMatches) {
       if (!info.commands.includes(match[1])) {
         info.commands.push(match[1]);
@@ -382,9 +412,13 @@ function extractPluginInfo(content: string, defaultName: string): PluginInfo {
   }
   
   // 从 commands 对象提取
-  const commandsMatch = pluginContent.match(/commands\s*:\s*\{([^}]+)\}/s);
+  const commandsMatch = pluginContent.match(
+    /commands\s*(?:=|:)\s*\{([\s\S]*?)^\s{2}\}[,;]?/m
+  );
   if (commandsMatch) {
-    const cmdMatches = commandsMatch[1].matchAll(/(\w+)\s*:\s*\{/g);
+    const cmdMatches = commandsMatch[1].matchAll(
+      /^\s{4}["'`]?([^"'`\s:]+)["'`]?\s*:\s*\{/gm
+    );
     for (const match of cmdMatches) {
       if (!info.commands.includes(match[1])) {
         info.commands.push(match[1]);

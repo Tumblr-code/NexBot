@@ -1,5 +1,5 @@
 import { Plugin } from "../types/index.js";
-import { pluginManager } from "../core/pluginManager.js";
+import { pluginManager, getPrimaryPrefix } from "../core/pluginManager.js";
 import { fmt, escapeHTML } from "../utils/context.js";
 import { VERSION } from "../utils/version.js";
 import { cleanPluginDescription } from "../utils/helpers.js";
@@ -219,7 +219,7 @@ const helpPlugin: Plugin = {
       aliases: ["h", "start", "帮助"],
       examples: ["help", "help ping", "help lottery", "help ip", "help system"],
       handler: async (msg, args, ctx) => {
-        const prefix = process.env.CMD_PREFIX || ".";
+        const prefix = getPrimaryPrefix();
         
         if (args.length > 0) {
           const query = args[0].toLowerCase();

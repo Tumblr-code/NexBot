@@ -9,6 +9,7 @@ interface CacheEntry<T> {
   value: T;
   expiry: number | null;
   createdAt: number;
+  lastAccessedAt: number;
 }
 
 interface CacheStats {
@@ -19,6 +20,7 @@ interface CacheStats {
 
 class Cache<T = any> {
   private cache: Map<string, CacheEntry<T>> = new Map();
+  private inFlight: Map<string, Promise<T>> = new Map();
   private stats: CacheStats = { hits: 0, misses: 0, size: 0 };
   private maxSize: number;
   private defaultTTL: number;
@@ -31,6 +33,7 @@ class Cache<T = any> {
     // 启动定期清理
     const cleanupMs = options.cleanupInterval || 60 * 1000; // 每分钟清理
     this.cleanupInterval = setInterval(() => this.cleanup(), cleanupMs);
+    this.cleanupInterval.unref?.();
   }
 
   /**
@@ -42,13 +45,15 @@ class Cache<T = any> {
       this.evictLRU();
     }
 
-    const expiry = ttl !== undefined ? (ttl === 0 ? null : Date.now() + ttl) : 
-                   (this.defaultTTL === 0 ? null : Date.now() + this.defaultTTL);
+    const now = Date.now();
+    const expiry = ttl !== undefined ? (ttl === 0 ? null : now + ttl) : 
+                   (this.defaultTTL === 0 ? null : now + this.defaultTTL);
 
     this.cache.set(key, {
       value,
       expiry,
-      createdAt: Date.now(),
+      createdAt: now,
+      lastAccessedAt: now,
     });
 
     this.stats.size = this.cache.size;
@@ -74,6 +79,7 @@ class Cache<T = any> {
     }
 
     this.stats.hits++;
+    entry.lastAccessedAt = Date.now();
     return entry.value;
   }
 
@@ -89,6 +95,7 @@ class Cache<T = any> {
       return false;
     }
     
+    entry.lastAccessedAt = Date.now();
     return true;
   }
 
@@ -96,6 +103,7 @@ class Cache<T = any> {
    * 删除缓存
    */
   delete(key: string): boolean {
+    this.inFlight.delete(key);
     const result = this.cache.delete(key);
     this.stats.size = this.cache.size;
     return result;
@@ -105,6 +113,7 @@ class Cache<T = any> {
    * 清空缓存
    */
   clear(): void {
+    this.inFlight.clear();
     this.cache.clear();
     this.stats.size = 0;
     logger.info("缓存已清空");
@@ -119,9 +128,23 @@ class Cache<T = any> {
       return cached;
     }
 
-    const value = await factory();
-    this.set(key, value, ttl);
-    return value;
+    const pending = this.inFlight.get(key);
+    if (pending) {
+      return pending;
+    }
+
+    const task = (async () => {
+      try {
+        const value = await factory();
+        this.set(key, value, ttl);
+        return value;
+      } finally {
+        this.inFlight.delete(key);
+      }
+    })();
+
+    this.inFlight.set(key, task);
+    return task;
   }
 
   /**
@@ -152,8 +175,8 @@ class Cache<T = any> {
     let oldestTime = Infinity;
 
     for (const [key, entry] of this.cache.entries()) {
-      if (entry.createdAt < oldestTime) {
-        oldestTime = entry.createdAt;
+      if (entry.lastAccessedAt < oldestTime) {
+        oldestTime = entry.lastAccessedAt;
         oldestKey = key;
       }
     }

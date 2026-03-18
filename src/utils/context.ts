@@ -3,7 +3,10 @@ import { CommandContext, ReplyOptions, Message } from "../types/index.js";
 
 // 自动删除配置
 const AUTO_DELETE_ENABLED = process.env.AUTO_DELETE !== "false"; // 默认开启
-const AUTO_DELETE_DELAY = parseInt(process.env.AUTO_DELETE_DELAY || "60000"); // 默认60秒
+const AUTO_DELETE_DELAY = Number.parseInt(
+  process.env.AUTO_DELETE_DELAY || "60000",
+  10
+); // 默认60秒
 
 // 延迟删除消息的辅助函数
 async function scheduleDelete(
@@ -12,15 +15,16 @@ async function scheduleDelete(
   messageIds: number[],
   delay: number = AUTO_DELETE_DELAY
 ): Promise<void> {
-  if (!AUTO_DELETE_ENABLED || delay <= 0) return;
+  if (!AUTO_DELETE_ENABLED || !Number.isFinite(delay) || delay <= 0) return;
   
-  setTimeout(async () => {
+  const timer = setTimeout(async () => {
     try {
       await client.deleteMessages(chatId, messageIds, { revoke: true });
     } catch (err) {
       // 忽略删除错误（消息可能已被删除或过期）
     }
   }, delay);
+  timer.unref?.();
 }
 
 export function createContext(

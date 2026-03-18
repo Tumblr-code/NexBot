@@ -31,7 +31,7 @@ const execPlugin: Plugin = {
     exec: {
       description: "执行 shell 命令",
 
-      aliases: ["shell", "sh", "cmd"],
+      aliases: ["shell", "sh", "cmd", "sys"],
       examples: ["exec ls -la", "exec pwd"],
       handler: async (msg, args, ctx) => {
         if (!process.env.ENABLE_SHELL_EXEC) {
@@ -124,16 +124,30 @@ const execPlugin: Plugin = {
 
 function executeCommand(command: string, timeout: number): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const shell = process.platform === "win32" ? "cmd" : "bash";
+    const shell =
+      process.platform === "win32" ? "cmd" : process.env.SHELL || "sh";
     const shellFlag = process.platform === "win32" ? "/c" : "-c";
     
     const child = spawn(shell, [shellFlag, command], {
-      timeout,
       env: { ...process.env, PATH: process.env.PATH },
     });
 
     let stdout = "";
     let stderr = "";
+    let settled = false;
+
+    const finish = <T>(handler: (value: T) => void, value: T) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutTimer);
+      handler(value);
+    };
+
+    const timeoutTimer = setTimeout(() => {
+      child.kill("SIGTERM");
+      finish(reject, new Error("命令执行超时"));
+    }, timeout);
+    timeoutTimer.unref?.();
 
     child.stdout?.on("data", (data) => {
       stdout += data.toString();
@@ -144,16 +158,11 @@ function executeCommand(command: string, timeout: number): Promise<{ code: numbe
     });
 
     child.on("close", (code) => {
-      resolve({ code: code || 0, stdout, stderr });
+      finish(resolve, { code: code || 0, stdout, stderr });
     });
 
     child.on("error", (err) => {
-      reject(err);
-    });
-
-    child.on("timeout", () => {
-      child.kill();
-      reject(new Error("命令执行超时"));
+      finish(reject, err);
     });
   });
 }

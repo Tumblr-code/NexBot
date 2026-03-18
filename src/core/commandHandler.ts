@@ -1,38 +1,78 @@
-import { TelegramClient, Api } from "telegram";
-import { NewMessage } from "telegram/events";
-import { pluginManager } from "./pluginManager.js";
+import { TelegramClient } from "telegram";
+import { NewMessage, NewMessageEvent } from "telegram/events";
+import { pluginManager, parseCommandText } from "./pluginManager.js";
 import { createContext } from "../utils/context.js";
-import { db } from "../utils/database.js";
 import { logger } from "../utils/logger.js";
 import { healthChecker } from "../utils/healthCheck.js";
 import { defaultRateLimiter } from "../utils/rateLimiter.js";
 
 // 自动删除配置
 const AUTO_DELETE_ENABLED = process.env.AUTO_DELETE !== "false"; // 默认开启
-const AUTO_DELETE_DELAY = parseInt(process.env.AUTO_DELETE_DELAY || "60000"); // 默认60秒
+const AUTO_DELETE_DELAY = Number.parseInt(
+  process.env.AUTO_DELETE_DELAY || "60000",
+  10
+);
 
 export class CommandHandler {
   private client: TelegramClient;
-  private prefix: string;
-  private devPrefix: string;
+  private ownerId: string | null = null;
+  private ownerIdPromise: Promise<string> | null = null;
 
   constructor(client: TelegramClient) {
     this.client = client;
-    this.prefix = process.env.CMD_PREFIX || ".";
-    this.devPrefix = "!";
   }
 
   // 延迟删除消息的辅助方法
   private scheduleDelete(chatId: any, messageIds: number[], delay: number = AUTO_DELETE_DELAY): void {
-    if (!AUTO_DELETE_ENABLED || delay <= 0) return;
+    if (!AUTO_DELETE_ENABLED || !Number.isFinite(delay) || delay <= 0) return;
     
-    setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         await this.client.deleteMessages(chatId, messageIds, { revoke: true });
       } catch (err) {
         // 忽略删除错误（消息可能已被删除或过期）
       }
     }, delay);
+    (timer as NodeJS.Timeout).unref?.();
+  }
+
+  private async getOwnerId(): Promise<string> {
+    if (this.ownerId) {
+      return this.ownerId;
+    }
+
+    if (!this.ownerIdPromise) {
+      this.ownerIdPromise = this.client
+        .getMe()
+        .then((me) => {
+          const resolved =
+            me?.id?.toString() || process.env.OWNER_ID || "";
+          if (!resolved) {
+            throw new Error("无法解析当前登录用户 ID");
+          }
+          this.ownerId = resolved;
+          return resolved;
+        })
+        .catch((err) => {
+          this.ownerIdPromise = null;
+          throw err;
+        });
+    }
+
+    return this.ownerIdPromise;
+  }
+
+  private getChatTarget(msg: any): any {
+    return msg.chatId || msg.peerId?.userId || msg.chat?.id || msg.peerId;
+  }
+
+  private isOwnerCommand(msg: any, ownerId: string): boolean {
+    if (msg.out || msg.savedPeerId) {
+      return true;
+    }
+
+    const senderId = msg.senderId?.toString?.() || msg.fromId?.toString?.();
+    return senderId === ownerId;
   }
 
   start(): void {
@@ -40,19 +80,16 @@ export class CommandHandler {
     logger.info("命令处理器已启动");
   }
 
-  private async handleMessage(event: { message: { message: string; chatId: BigInteger; senderId: BigInteger | undefined; id: number; date: number; replyToMsgId?: number }; }): Promise<void> {
+  private async handleMessage(event: NewMessageEvent): Promise<void> {
     try {
-      const msg = event.message;
+      const msg = event.message as any;
       if (!msg) return;
       
-      const text = msg.message;
+      const text = msg.message || msg.text;
       if (!text || typeof text !== "string") return;
 
-      const isDev = process.env.NODE_ENV === "development";
-      const prefix = isDev ? this.devPrefix : this.prefix;
-
-      // 检查是否是命令
-      if (!text.startsWith(prefix)) {
+      const parsedCommand = parseCommandText(text);
+      if (!parsedCommand) {
         // 传递给插件的消息监听器
         try {
           await pluginManager.handleMessage(msg);
@@ -64,15 +101,23 @@ export class CommandHandler {
         return;
       }
 
-      // 解析命令
-      const content = text.slice(prefix.length).trim();
-      if (!content) return;
-      
-      const parts = content.split(/\s+/);
-      const cmdName = parts[0].toLowerCase();
-      const args = parts.slice(1);
+      const cmdName = parsedCommand.name;
+      const args = parsedCommand.args;
 
       if (!cmdName) return;
+
+      let ownerId = process.env.OWNER_ID || "";
+      try {
+        ownerId = await this.getOwnerId();
+      } catch (err) {
+        logger.error("获取 OWNER_ID 失败:", err);
+        healthChecker.recordCommand(false);
+        return;
+      }
+
+      if (!this.isOwnerCommand(msg, ownerId)) {
+        return;
+      }
 
       // 查找命令
       const cmdInfo = pluginManager.getCommand(cmdName);
@@ -80,52 +125,58 @@ export class CommandHandler {
         // 未知命令，忽略或可以发送帮助
         return;
       }
-
-      // 检查权限 - 获取当前登录用户作为 OWNER
-      const me = await this.client.getMe();
-      const OWNER_ID = me?.id?.toString() || process.env.OWNER_ID || "7873158072";
-      const senderId = msg.senderId?.toString() || "";
-      
-      // 发送者 ID 必须与 OWNER_ID 匹配
-      if (senderId !== OWNER_ID.toString()) {
-        // 其他人发来的命令，静默忽略
-        return;
-      }
       
       const isSudo = true; // 登录用户就是 sudo
 
       // 限流检查
-      const rateLimitKey = `${senderId}:${cmdName}`;
+      const rateLimitKey = `${ownerId}:${cmdName.toLowerCase()}`;
       const rateCheck = defaultRateLimiter.record(rateLimitKey);
       
       if (!rateCheck.allowed) {
         try {
           const resetSec = Math.ceil((rateCheck.resetTime - Date.now()) / 1000);
-          const rateMsg = await this.client.sendMessage(msg.chatId as any, {
-            message: `⏱️ 请求过于频繁，请 ${resetSec} 秒后再试`,
-            replyTo: Number(msg.id),
-          });
-          // 限流提示消息也自动删除
-          this.scheduleDelete(msg.chatId as any, [rateMsg.id]);
+          const chatTarget = this.getChatTarget(msg);
+          if (chatTarget) {
+            const rateMsg = await this.client.sendMessage(chatTarget, {
+              message: `⏱️ 请求过于频繁，请 ${resetSec} 秒后再试`,
+              replyTo: Number(msg.id),
+            });
+            // 限流提示消息也自动删除
+            this.scheduleDelete(chatTarget, [rateMsg.id]);
+          }
         } catch (err) {
           logger.error("发送限流消息失败:", err);
         }
         healthChecker.recordCommand(false);
         // 限流时删除用户的命令消息
-        this.scheduleDelete(msg.chatId as any, [Number(msg.id)]);
+        const chatTarget = this.getChatTarget(msg);
+        if (chatTarget) {
+          this.scheduleDelete(chatTarget, [Number(msg.id)]);
+        }
         return;
       }
 
       // 执行命令
       try {
         const ctx = createContext(this.client, msg as any, isSudo);
+        Object.defineProperty(msg, "__nexbotCommand", {
+          value: {
+            name: cmdName,
+            args,
+            prefix: parsedCommand.prefix,
+            raw: parsedCommand.raw,
+          },
+          configurable: true,
+          enumerable: false,
+          writable: true,
+        });
         await cmdInfo.def.handler(msg as any, args, ctx);
         
-        logger.debug(`命令执行: ${cmdName} [${senderId}]`);
+        logger.debug(`命令执行: ${cmdName} [${ownerId}]`);
         healthChecker.recordCommand(true);
         
         // 命令执行成功后，自动删除用户发送的命令消息
-        const chatId = (msg as any).chatId || (msg as any).peerId?.userId || (msg as any).chat?.id;
+        const chatId = this.getChatTarget(msg);
         if (chatId) {
           this.scheduleDelete(chatId, [Number(msg.id)]);
         }
@@ -137,7 +188,7 @@ export class CommandHandler {
         healthChecker.recordCommand(false);
         
         try {
-          const chatId = (msg as any).chatId || (msg as any).peerId?.userId;
+          const chatId = this.getChatTarget(msg);
           if (chatId) {
             const errorReply = await this.client.sendMessage(chatId, {
               message: `❌ 命令执行出错: ${errorMsg}`,
@@ -150,7 +201,7 @@ export class CommandHandler {
         }
         
         // 出错时也删除用户的命令消息
-        const chatId = (msg as any).chatId || (msg as any).peerId?.userId || (msg as any).chat?.id;
+        const chatId = this.getChatTarget(msg);
         if (chatId) {
           this.scheduleDelete(chatId, [Number(msg.id)]);
         }

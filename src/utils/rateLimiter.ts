@@ -32,6 +32,7 @@ class RateLimiter {
 
     // 每分钟清理一次过期数据
     this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
+    this.cleanupInterval.unref?.();
   }
 
   /**
