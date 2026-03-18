@@ -65,8 +65,14 @@ function getWeatherIconSvg(code: number, isDay: number): string {
   const y = 230; // 统一 Y 坐标
   const cloudColor = isDay === 0 ? "#707090" : "#FFFFFF";
   
-  // 统一云形状
-  const cloud = (fill: string) => `<path d="M -50 -10 Q -80 -10 -100 -30 Q -120 -10 -150 -10 Q -180 -10 -180 -40 Q -180 -70 -150 -70 L 10 -70 Q 50 -70 50 -40 Q 50 -10 10 -10 Z" fill="${fill}" stroke="none"/>`;
+  // 统一云形状，保证视觉中心与画布中心对齐
+  const cloud = (fill: string) => `
+    <g fill="${fill}" stroke="none">
+      <circle cx="-62" cy="-18" r="34"/>
+      <circle cx="-8" cy="-42" r="44"/>
+      <circle cx="54" cy="-16" r="36"/>
+      <rect x="-108" y="-26" width="216" height="58" rx="29"/>
+    </g>`;
   
   // 晴朗 - 太阳
   if (code === 0) {
@@ -117,9 +123,9 @@ function getWeatherIconSvg(code: number, isDay: number): string {
     return `<g transform="translate(300,${y})">
       ${cloud("#C0E0F8")}
       <g stroke="#60A0D0" stroke-width="3" stroke-linecap="round">
-        <line x1="-60" y1="15" x2="-65" y2="35"/>
-        <line x1="-20" y1="15" x2="-25" y2="35"/>
-        <line x1="20" y1="15" x2="15" y2="35"/>
+        <line x1="-52" y1="15" x2="-58" y2="36"/>
+        <line x1="0" y1="18" x2="-6" y2="39"/>
+        <line x1="52" y1="15" x2="46" y2="36"/>
       </g>
     </g>`;
   }
@@ -128,10 +134,10 @@ function getWeatherIconSvg(code: number, isDay: number): string {
     return `<g transform="translate(300,${y})">
       ${cloud("#A0D0F8")}
       <g stroke="#4090D0" stroke-width="4" stroke-linecap="round">
-        <line x1="-70" y1="10" x2="-78" y2="45"/>
-        <line x1="-25" y1="10" x2="-33" y2="45"/>
-        <line x1="20" y1="10" x2="12" y2="45"/>
-        <line x1="65" y1="10" x2="57" y2="45"/>
+        <line x1="-72" y1="10" x2="-80" y2="46"/>
+        <line x1="-24" y1="10" x2="-32" y2="46"/>
+        <line x1="24" y1="10" x2="16" y2="46"/>
+        <line x1="72" y1="10" x2="64" y2="46"/>
       </g>
     </g>`;
   }
@@ -140,11 +146,11 @@ function getWeatherIconSvg(code: number, isDay: number): string {
     return `<g transform="translate(300,${y})">
       ${cloud("#80C0F8")}
       <g stroke="#2070C0" stroke-width="5" stroke-linecap="round">
-        <line x1="-80" y1="10" x2="-90" y2="55"/>
-        <line x1="-40" y1="10" x2="-50" y2="55"/>
-        <line x1="0" y1="10" x2="-10" y2="55"/>
-        <line x1="40" y1="10" x2="30" y2="55"/>
-        <line x1="80" y1="10" x2="70" y2="55"/>
+        <line x1="-82" y1="10" x2="-92" y2="56"/>
+        <line x1="-41" y1="10" x2="-51" y2="56"/>
+        <line x1="0" y1="10" x2="-10" y2="56"/>
+        <line x1="41" y1="10" x2="31" y2="56"/>
+        <line x1="82" y1="10" x2="72" y2="56"/>
       </g>
     </g>`;
   }
@@ -153,9 +159,9 @@ function getWeatherIconSvg(code: number, isDay: number): string {
     return `<g transform="translate(300,${y})">
       ${cloud("#E8F8FF")}
       <g fill="#FFFFFF">
-        <circle cx="-50" cy="25" r="5"/>
+        <circle cx="-54" cy="25" r="5"/>
         <circle cx="0" cy="40" r="5"/>
-        <circle cx="50" cy="25" r="5"/>
+        <circle cx="54" cy="25" r="5"/>
       </g>
     </g>`;
   }
@@ -164,11 +170,11 @@ function getWeatherIconSvg(code: number, isDay: number): string {
     return `<g transform="translate(300,${y})">
       ${cloud("#D8F0FF")}
       <g fill="#FFFFFF">
-        <rect x="-65" y="20" width="10" height="10" rx="2"/>
-        <rect x="-20" y="35" width="10" height="10" rx="2"/>
-        <rect x="25" y="20" width="10" height="10" rx="2"/>
-        <rect x="-42" y="50" width="10" height="10" rx="2"/>
-        <rect x="8" y="50" width="10" height="10" rx="2"/>
+        <rect x="-70" y="20" width="10" height="10" rx="2"/>
+        <rect x="-25" y="35" width="10" height="10" rx="2"/>
+        <rect x="20" y="20" width="10" height="10" rx="2"/>
+        <rect x="-47" y="50" width="10" height="10" rx="2"/>
+        <rect x="3" y="50" width="10" height="10" rx="2"/>
       </g>
     </g>`;
   }
@@ -177,13 +183,13 @@ function getWeatherIconSvg(code: number, isDay: number): string {
     return `<g transform="translate(300,${y})">
       ${cloud("#C8E8FF")}
       <g fill="#FFFFFF">
-        <rect x="-80" y="20" width="12" height="12" rx="2"/>
-        <rect x="-30" y="35" width="12" height="12" rx="2"/>
-        <rect x="20" y="20" width="12" height="12" rx="2"/>
-        <rect x="70" y="35" width="12" height="12" rx="2"/>
-        <rect x="-55" y="55" width="12" height="12" rx="2"/>
-        <rect x="-5" y="55" width="12" height="12" rx="2"/>
-        <rect x="45" y="55" width="12" height="12" rx="2"/>
+        <rect x="-84" y="20" width="12" height="12" rx="2"/>
+        <rect x="-36" y="35" width="12" height="12" rx="2"/>
+        <rect x="12" y="20" width="12" height="12" rx="2"/>
+        <rect x="60" y="35" width="12" height="12" rx="2"/>
+        <rect x="-60" y="55" width="12" height="12" rx="2"/>
+        <rect x="-6" y="55" width="12" height="12" rx="2"/>
+        <rect x="48" y="55" width="12" height="12" rx="2"/>
       </g>
     </g>`;
   }
