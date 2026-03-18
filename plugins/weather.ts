@@ -246,7 +246,6 @@ function generateWeatherPoster(
   const subTextColor = "rgba(255,255,255,0.85)";
   const safeCityName = escapeSvgText(cityName);
   const safeCountry = escapeSvgText(country);
-  const safeDesc = escapeSvgText(info.desc);
   const safeWindDir = escapeSvgText(windDir);
   
   const bgColor = isDay === 0 ? "#1a1a2e" : info.bg;
@@ -259,55 +258,63 @@ function generateWeatherPoster(
       <stop offset="0%" stop-color="${bgColor}"/>
       <stop offset="100%" stop-color="${accentColor}"/>
     </linearGradient>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.24)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.08)"/>
+    </linearGradient>
     <filter id="shadow">
       <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.3"/>
+    </filter>
+    <filter id="softShadow">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-opacity="0.18"/>
     </filter>
   </defs>
   
   <rect width="600" height="800" fill="url(#bg)"/>
-  <circle cx="500" cy="150" r="80" fill="rgba(255,255,255,0.1)"/>
-  <circle cx="100" cy="700" r="120" fill="rgba(255,255,255,0.05)"/>
+  <circle cx="500" cy="110" r="96" fill="rgba(255,255,255,0.10)"/>
+  <circle cx="90" cy="715" r="138" fill="rgba(255,255,255,0.06)"/>
+  <circle cx="520" cy="680" r="74" fill="rgba(255,255,255,0.05)"/>
+  <rect x="44" y="332" width="512" height="396" rx="34" fill="url(#glass)" stroke="rgba(255,255,255,0.20)" stroke-width="1.5" filter="url(#softShadow)"/>
   ${getWeatherIconSvg(weatherCode, isDay)}
   
-  <text x="300" y="90" font-family="${SVG_FONT_FAMILY}" font-size="52" font-weight="bold" 
+  <text x="300" y="94" font-family="${SVG_FONT_FAMILY}" font-size="52" font-weight="bold" 
         fill="${textColor}" text-anchor="middle" filter="url(#shadow)">${safeCityName}</text>
-  <text x="300" y="130" font-family="${SVG_FONT_FAMILY}" font-size="24" 
+  <text x="300" y="134" font-family="${SVG_FONT_FAMILY}" font-size="24" 
         fill="${subTextColor}" text-anchor="middle">${safeCountry}</text>
   
-  <text x="300" y="280" font-family="${SVG_FONT_FAMILY}" font-size="48" font-weight="bold"
-        fill="${textColor}" text-anchor="middle">${safeDesc}</text>
-  
-  <text x="300" y="430" font-family="${SVG_FONT_FAMILY}" font-size="100" font-weight="bold" 
+  <text x="300" y="436" font-family="${SVG_FONT_FAMILY}" font-size="108" font-weight="bold" 
         fill="${textColor}" text-anchor="middle" filter="url(#shadow)">${Math.round(temp)}°C</text>
-  <text x="300" y="475" font-family="${SVG_FONT_FAMILY}" font-size="24" 
-        fill="${subTextColor}" text-anchor="middle">体感 ${Math.round(feelsLike)}°C</text>
+  <text x="300" y="480" font-family="${SVG_FONT_FAMILY}" font-size="24" 
+        fill="${subTextColor}" text-anchor="middle">体感温度 ${Math.round(feelsLike)}°C</text>
+  <text x="300" y="516" font-family="${SVG_FONT_FAMILY}" font-size="17"
+        fill="rgba(255,255,255,0.72)" text-anchor="middle">${isDay === 0 ? "夜间实况" : "白天实况"} · Open-Meteo</text>
   
-  <line x1="50" y1="520" x2="550" y2="520" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  <line x1="84" y1="548" x2="516" y2="548" stroke="rgba(255,255,255,0.24)" stroke-width="1.5"/>
   
   <g font-family="${SVG_FONT_FAMILY}" fill="${subTextColor}" font-size="18">
-    <text x="100" y="570" text-anchor="middle">湿度</text>
-    <text x="300" y="570" text-anchor="middle">风向</text>
-    <text x="500" y="570" text-anchor="middle">气压</text>
+    <text x="124" y="590" text-anchor="middle">湿度</text>
+    <text x="300" y="590" text-anchor="middle">风向</text>
+    <text x="476" y="590" text-anchor="middle">气压</text>
     
-    <text x="100" y="600" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${humidity}%</text>
-    <text x="300" y="600" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${safeWindDir} ${windSpeed}km/h</text>
-    <text x="500" y="600" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${Math.round(pressure)}hPa</text>
+    <text x="124" y="624" text-anchor="middle" font-size="28" fill="${textColor}" font-weight="bold">${humidity}%</text>
+    <text x="300" y="624" text-anchor="middle" font-size="28" fill="${textColor}" font-weight="bold">${safeWindDir} ${windSpeed}km/h</text>
+    <text x="476" y="624" text-anchor="middle" font-size="28" fill="${textColor}" font-weight="bold">${Math.round(pressure)}hPa</text>
     
-    <text x="150" y="660" text-anchor="middle">能见度</text>
-    <text x="300" y="660" text-anchor="middle">最高</text>
-    <text x="450" y="660" text-anchor="middle">最低</text>
+    <text x="150" y="682" text-anchor="middle">能见度</text>
+    <text x="300" y="682" text-anchor="middle">最高</text>
+    <text x="450" y="682" text-anchor="middle">最低</text>
     
-    <text x="150" y="690" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${(visibility/1000).toFixed(1)}km</text>
-    <text x="300" y="690" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${Math.round(high)}°</text>
-    <text x="450" y="690" text-anchor="middle" font-size="26" fill="${textColor}" font-weight="bold">${Math.round(low)}°</text>
+    <text x="150" y="716" text-anchor="middle" font-size="28" fill="${textColor}" font-weight="bold">${(visibility/1000).toFixed(1)}km</text>
+    <text x="300" y="716" text-anchor="middle" font-size="28" fill="${textColor}" font-weight="bold">${Math.round(high)}°</text>
+    <text x="450" y="716" text-anchor="middle" font-size="28" fill="${textColor}" font-weight="bold">${Math.round(low)}°</text>
   </g>
   
   <g font-family="${SVG_FONT_FAMILY}" fill="${subTextColor}" font-size="20">
-    <text x="200" y="750" text-anchor="middle">日出 ${sunrise}</text>
-    <text x="400" y="750" text-anchor="middle">日落 ${sunset}</text>
+    <text x="200" y="764" text-anchor="middle">日出 ${sunrise}</text>
+    <text x="400" y="764" text-anchor="middle">日落 ${sunset}</text>
   </g>
   
-  <text x="300" y="790" font-family="${SVG_FONT_FAMILY}" font-size="14" 
+  <text x="300" y="792" font-family="${SVG_FONT_FAMILY}" font-size="14" 
         fill="${subTextColor}" text-anchor="middle">NexBot 天气</text>
 </svg>`;
 }
