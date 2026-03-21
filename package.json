@@ -1,34 +1,36 @@
 {
   "name": "nexbot",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "下一代 Telegram Bot 框架 - 更快、更简单、更稳定",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun run --watch src/index.ts",
     "pm": "bun run src/cli/pm.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "bun test"
   },
   "keywords": [
     "telegram",
     "bot",
+    "userbot",
     "framework",
     "plugin",
-    "typescript"
+    "typescript",
+    "bun"
   ],
   "author": "NexBot Team",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.7.9",
     "dotenv": "^16.4.7",
-    "lowdb": "^7.0.1",
     "sharp": "^0.33.5",
     "socks-proxy-agent": "^8.0.5",
     "telegram": "^2.26.22"
   },
   "devDependencies": {
+    "@types/bun": "latest",
     "@types/node": "^22.13.5",
     "typescript": "^5.7.3"
   },

@@ -46,32 +46,33 @@ async function main() {
     logger.info("✅ NexBot 已启动");
     logger.info(`命令前缀: ${process.env.NODE_ENV === "development" ? "!" : process.env.CMD_PREFIX || "."}`);
 
+    // 优雅退出辅助函数
+    async function gracefulShutdown(exitCode = 0): Promise<void> {
+      logger.info("正在关闭...");
+      healthChecker.stopMonitoring();
+      try {
+        await clientManager.disconnect();
+      } catch {
+        // 忽略断开连接的错误
+      }
+      db.close();
+      process.exit(exitCode);
+    }
+
     // 优雅退出
-    process.on("SIGINT", async () => {
-      logger.info("正在关闭...");
-      healthChecker.stopMonitoring();
-      await clientManager.disconnect();
-      db.close();
-      process.exit(0);
+    process.on("SIGINT", () => gracefulShutdown(0));
+    process.on("SIGTERM", () => gracefulShutdown(0));
+
+    // 未捕获的异常：记录后退出，由外部进程管理器（systemd/pm2/docker）重启
+    // 注意：uncaughtException 后程序状态不可预知，继续运行有数据损坏风险
+    process.on("uncaughtException", async (err) => {
+      logger.error("未捕获的异常，准备关闭:", err);
+      await gracefulShutdown(1);
     });
 
-    process.on("SIGTERM", async () => {
-      logger.info("正在关闭...");
-      healthChecker.stopMonitoring();
-      await clientManager.disconnect();
-      db.close();
-      process.exit(0);
-    });
-
-    // 未捕获的异常处理
-    process.on("uncaughtException", (err) => {
-      logger.error("未捕获的异常:", err);
-      // 不退出进程，继续运行
-    });
-
-    process.on("unhandledRejection", (reason, promise) => {
-      logger.error("未处理的 Promise 拒绝:", reason);
-      // 不退出进程，继续运行
+    process.on("unhandledRejection", async (reason) => {
+      logger.error("未处理的 Promise 拒绝，准备关闭:", reason);
+      await gracefulShutdown(1);
     });
 
   } catch (err) {

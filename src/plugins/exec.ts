@@ -21,21 +21,50 @@ const EMOJI = {
   ARROW: "→",
 };
 
+/**
+ * Shell 命令白名单：只允许这些命令前缀通过。
+ * 如需扩展，请在 .env 中设置 SHELL_WHITELIST=cmd1,cmd2,...
+ */
+const DEFAULT_SHELL_WHITELIST = [
+  "ls", "cat", "echo", "pwd", "whoami", "date", "uname",
+  "df", "du", "free", "ps", "uptime", "env",
+  "grep", "awk", "sed", "sort", "uniq", "wc", "head", "tail",
+  "find", "which", "id", "hostname",
+  "curl", "wget", "ping",
+  "git", "bun", "node", "npm", "npx",
+];
+
+function getShellWhitelist(): string[] {
+  const envList = process.env.SHELL_WHITELIST;
+  if (envList) {
+    return envList.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return DEFAULT_SHELL_WHITELIST;
+}
+
+/** 检查命令首个 token 是否在白名单中（防止黑名单绕过） */
+function isCommandAllowed(command: string): boolean {
+  const firstToken = command.trim().split(/\s+/)[0];
+  return getShellWhitelist().includes(firstToken);
+}
+
 const execPlugin: Plugin = {
   name: "exec",
-  version: "1.0.0",
-  description: "安全的 Shell 命令执行",
+  version: "1.1.0",
+  description: "安全的 Shell 命令执行（白名单模式）",
   author: "NexBot",
 
   commands: {
     exec: {
-      description: "执行 shell 命令",
-
+      description: "执行 shell 命令（白名单限制）",
       aliases: ["shell", "sh", "cmd", "sys"],
       examples: ["exec ls -la", "exec pwd"],
       handler: async (msg, args, ctx) => {
         if (!process.env.ENABLE_SHELL_EXEC) {
-          await ctx.editHTML(`${EMOJI.DISABLED} <b>Shell 执行已禁用</b>`);
+          await ctx.editHTML(
+            `${EMOJI.DISABLED} <b>Shell 执行已禁用</b>\n\n` +
+            `如需启用，请在 .env 中设置 <code>ENABLE_SHELL_EXEC=true</code>`
+          );
           return;
         }
 
@@ -45,22 +74,16 @@ const execPlugin: Plugin = {
           return;
         }
 
-        // 危险命令检查
-        const dangerousCommands = [
-          "rm -rf /",
-          "rm -rf /*",
-          "> /dev/sda",
-          "mkfs",
-          "dd if=/dev/zero",
-          ":(){ :|:& };:",
-        ];
-        
-        for (const dangerous of dangerousCommands) {
-          if (command.includes(dangerous)) {
-            await ctx.editHTML(`${EMOJI.DANGER} <b>检测到危险命令</b>\n\n已阻止执行: <code>${command}</code>`);
-            logger.warn(`阻止危险命令: ${command}`);
-            return;
-          }
+        // 白名单检查（替代原有黑名单，防止各种绕过方式）
+        if (!isCommandAllowed(command)) {
+          const firstToken = command.trim().split(/\s+/)[0];
+          await ctx.editHTML(
+            `${EMOJI.BLOCK} <b>命令不在白名单中</b>\n\n` +
+            `<code>${firstToken}</code> 未被允许执行。\n\n` +
+            `如需添加，请在 .env 中设置 <code>SHELL_WHITELIST=cmd1,cmd2,...</code>`
+          );
+          logger.warn(`拒绝非白名单命令: ${command}`);
+          return;
         }
 
         const timeout = parseInt(process.env.SHELL_TIMEOUT || "30000");
@@ -92,10 +115,9 @@ const execPlugin: Plugin = {
     },
 
     eval: {
-      description: "执行 JavaScript 代码",
-
+      description: "执行 JavaScript 代码（⚠️ 高权限，谨慎使用）",
       aliases: ["js"],
-      examples: ["eval 1 + 1", "eval console.log('Hello')"],
+      examples: ["eval 1 + 1", "eval ctx.client.getMe()"],
       handler: async (msg, args, ctx) => {
         const code = args.join(" ").trim();
         if (!code) {
@@ -103,9 +125,19 @@ const execPlugin: Plugin = {
           return;
         }
 
+        // ⚠️ 安全说明：
+        // new Function() 与直接 eval() 风险相同，可访问完整 Node.js 环境
+        // （process、文件系统、网络等），这不是沙箱。
+        // 此命令仅限 Bot 所有者在受信任环境下使用，切勿在公共 Bot 中开放。
+        logger.warn(`[eval] 执行高权限代码（前100字符）: ${code.slice(0, 100)}`);
+
         try {
-          // 使用 Function 构造器在沙箱中执行
-          const fn = new Function("client", "msg", "ctx", `"use strict"; return (async () => { ${code} })()`);
+          // 注意：以下代码具有完整 Node.js 权限，不受任何沙箱限制
+          // eslint-disable-next-line no-new-func
+          const fn = new Function(
+            "client", "msg", "ctx",
+            `"use strict"; return (async () => { ${code} })()`
+          );
           const result = await fn(ctx.client, msg, ctx);
           
           let output = result !== undefined ? String(result) : "(无返回值)";

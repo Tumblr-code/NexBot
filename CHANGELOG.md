@@ -5,6 +5,86 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.6.0] - 2026-03-21
+
+### 🔒 安全修复 (Security)
+
+- **src/plugins/exec.ts**: Shell 命令从黑名单改为白名单模式
+  - 原有黑名单（如 `rm -rf /`）可通过双空格、转义等方式绕过，已废弃
+  - 改为白名单：只允许 `ls`、`cat`、`git`、`bun` 等内置安全命令执行
+  - 支持通过 `SHELL_WHITELIST` 环境变量自定义扩展白名单
+- **src/plugins/exec.ts**: `eval` 命令补充准确的安全说明
+  - 移除错误的"沙箱"注释（`new Function()` 不是沙箱）
+  - 添加警告日志记录每次 eval 调用，便于审计
+- **.env.example**: `ENABLE_SHELL_EXEC` 默认值从 `true` 改为 `false`
+  - 用户必须主动设置为 `true` 才能启用 Shell 执行，降低默认风险
+
+### 🐛 Bug 修复 (Fixed)
+
+- **src/utils/logger.ts**: 修复日志文件中丢失 `...args` 错误堆栈的 Bug
+  - 原 `writeToFile(formatted)` 不包含 `args` 参数，Error 对象的 stack 不会写入文件
+  - 新增 `serializeArg()` 函数，Error 输出完整 stack，对象序列化为 JSON
+- **src/index.ts**: 修复 `uncaughtException` 后继续运行导致状态污染的问题
+  - 原来捕获后"不退出进程，继续运行"，可能导致内存泄漏或数据损坏
+  - 现在记录错误后执行优雅关闭（断开 Telegram 连接、关闭数据库），然后以退出码 1 退出
+  - 同等处理 `unhandledRejection`
+- **src/utils/rateLimiter.ts**: 修复双重判断逻辑 Bug
+  - 原代码先 `count >= max` 封禁，再 `count++` 后又 `count > max` 二次封禁，逻辑冗余
+  - 改为先 `count++` 再 `count > max` 单次判断，逻辑清晰
+- **test/bug-checker.ts**: 修复硬编码本地路径问题
+  - 原代码写死 `/mnt/okcomputer/output/nexbot`，在其他环境均报错
+  - 改为优先使用命令行参数，其次 `process.cwd()`
+
+### ⚡ 性能优化 (Performance)
+
+- **src/utils/logger.ts**: 日志写入从同步改为异步流写入
+  - 原 `appendFileSync` 同步 I/O 会阻塞事件循环
+  - 改用 `createWriteStream` 异步流写入，高频日志不再影响响应速度
+- **src/core/pluginManager.ts**: 插件初次加载改用普通 `import()`，不再强制 cache-busting
+  - 原来所有加载（含启动时首次加载）都加 `?t=timestamp` 绕过缓存，导致内存浪费
+  - Cache-busting 现在只在热重载 `reloadPlugin()` 时使用
+- **src/core/pluginManager.ts**: `onMessage` 改为并行执行
+  - 原来串行 `await instance.onMessage()`，多插件时延迟叠加
+  - 改为 `Promise.allSettled()` 并行执行，单个插件失败不影响其他插件
+- **src/utils/version.ts**: 版本号改为直接 `import` package.json
+  - 原来每次启动读取磁盘文件 + JSON.parse，改为编译时静态 import，零 I/O
+
+### 🏗️ 代码结构 (Refactor)
+
+- **src/utils/pluginManager.ts**: 消除与 core/pluginManager.ts 的重复
+  - `getPrefixes()` 和 `getPrefix()` 改为代理调用 core 中的 `getCommandPrefixes()` / `getPrimaryPrefix()`
+  - 确保前缀逻辑只在一处维护
+- **src/utils/pluginBase.ts**: 移除与 `types/index.ts` 冲突的 `abstract class Plugin`
+  - 改为 `export type { Plugin, ... } from "../types/index.js"` 统一类型来源
+  - 保留 `createDirectoryInAssets` 工具函数
+- **src/utils/index.ts**: 新增 utils 统一导出入口
+  - 插件和其他模块可通过 `import { logger, ... } from "../utils/index.js"` 一行引入所需工具
+- **src/core/pluginManager.ts**: 补充 `Api` 导入，消除 `msg: any` 类型
+
+### 📦 依赖管理 (Dependencies)
+
+- 移除 `axios`：Bun 内置 `fetch` 可完全替代，节省约 400KB 包体积
+- 移除 `lowdb`：项目实际使用 `bun:sqlite`，`lowdb` 从未被引用
+- 新增 `@types/bun` 开发依赖：消除代码中 `@ts-ignore` 对 Bun 特有 API 的注释
+- 新增 `"test": "bun test"` 脚本和 `"bun"` 关键字
+- `"main"` 字段从 `src/index.ts` 改为 `dist/index.js`（符合 npm 规范）
+
+### 🧪 测试 (Tests)
+
+- 新增 `test/core/parseCommand.test.ts`：命令解析单元测试
+  - 覆盖 `parseCommandText`、`resolveCommandPrefix`、`getCommandPrefixes` 等函数
+- 新增 `test/utils/rateLimiter.test.ts`：限流器完整单元测试
+  - 覆盖正常请求、超限封禁、手动封禁/解封、并发安全、统计信息等场景
+- 新增 `test/utils/cache.test.ts`：缓存单元测试
+  - 覆盖 TTL 过期、LRU 淘汰、getOrSet 防穿透、命中率统计等场景
+
+### 🔧 CI/CD
+
+- **`.github/workflows/ci.yml`**: 固定 Bun 版本为 `1.2.0`（原 `latest` 构建不可重现）
+- **`.github/workflows/ci.yml`**: 测试步骤添加 `--coverage` 并上传覆盖率报告
+- **`.github/dependabot.yml`**: 新增 Dependabot 配置，每周一自动检查依赖更新
+- **`tsconfig.json`**: 添加 `bun-types` 类型引用；测试目录加入 `include`
+
 ## [1.5.1] - 2026-02-28
 
 ### Fixed

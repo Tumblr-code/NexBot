@@ -190,7 +190,8 @@ class BugChecker {
   }
 }
 
-// 运行检查
-const checker = new BugChecker("/mnt/okcomputer/output/nexbot");
-checker.scanDirectory("/mnt/okcomputer/output/nexbot");
+// 运行检查：优先使用命令行参数，其次使用项目根目录
+const targetDir = process.argv[2] || process.cwd();
+const checker = new BugChecker(targetDir);
+checker.scanDirectory(targetDir);
 checker.generateReport();

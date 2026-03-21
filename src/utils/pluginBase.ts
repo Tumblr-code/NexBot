@@ -1,55 +1,29 @@
 /**
- * 插件基类 - 为 TeleBox 兼容插件提供支持
+ * 插件基础工具 - 为 TeleBox 兼容插件提供辅助函数
+ *
+ * Plugin 类型定义统一使用 src/types/index.ts 中的 interface Plugin，
+ * 本文件不再重复定义 abstract class Plugin，避免类型冲突。
  */
-import { TelegramClient, Api } from "telegram";
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
-// 插件接口定义
-export interface PluginConfig {
-  name: string;
-  version?: string;
-  description?: string;
-  author?: string;
-}
+// 重新导出标准 Plugin 接口，方便插件直接从此路径引入
+export type { Plugin, CommandDefinition, CmdHandler } from "../types/index.js";
 
-// 命令处理器类型
-export type CmdHandler = (msg: Api.Message, ...args: any[]) => Promise<void>;
-
-// 插件基类
-export abstract class Plugin {
-  abstract name: string;
-  abstract description: string;
-  version?: string = "1.0.0";
-  author?: string = "Unknown";
-  
-  // 命令处理器映射
-  cmdHandlers: Record<string, CmdHandler> = {};
-  
-  // 消息处理器 (NexBot 标准)
-  onMessage?(msg: Api.Message, client: TelegramClient): Promise<void>;
-  
-  // 初始化钩子
-  async onInit?(client: TelegramClient): Promise<void>;
-  
-  // 卸载钩子
-  async onUnload?(): Promise<void>;
-  
-  // 清理方法
-  async cleanup?(): Promise<void>;
-}
-
-// 创建目录辅助函数
+/**
+ * 在 data/assets 下创建子目录，并返回其绝对路径。
+ * 常用于插件存储静态资源。
+ */
 export function createDirectoryInAssets(dirName: string): string {
   const assetsDir = join(process.cwd(), "data", "assets");
   if (!existsSync(assetsDir)) {
     mkdirSync(assetsDir, { recursive: true });
   }
-  
+
   const targetDir = join(assetsDir, dirName);
   if (!existsSync(targetDir)) {
     mkdirSync(targetDir, { recursive: true });
   }
-  
+
   return targetDir;
 }

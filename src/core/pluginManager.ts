@@ -1,4 +1,4 @@
-import { TelegramClient } from "telegram";
+import { TelegramClient, Api } from "telegram";
 import { readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { pathToFileURL } from "url";
@@ -38,6 +38,13 @@ function normalizeCommandName(name: string): string {
   return name.trim().toLowerCase();
 }
 
+/** 普通模块加载（利用运行时缓存，适合首次加载） */
+function importModule(filePath: string) {
+  const fileUrl = pathToFileURL(filePath);
+  return import(fileUrl.href);
+}
+
+/** Cache-busting 加载（跳过缓存，仅用于热重载 reloadPlugin） */
 function importFreshModule(filePath: string) {
   const fileUrl = pathToFileURL(filePath);
   fileUrl.searchParams.set("t", Date.now().toString());
@@ -231,8 +238,8 @@ class PluginManager {
     for (const file of files) {
       try {
         const pluginPath = join(builtinDir, file);
-        const module = await importFreshModule(pluginPath);
-        
+        const module = await importModule(pluginPath);   // 首次加载用普通 import（利用缓存）
+
         if (module.default) {
           const plugin: Plugin = module.default;
           await this.registerPlugin(plugin, pluginPath, false);
@@ -257,8 +264,8 @@ class PluginManager {
     for (const file of files) {
       try {
         const pluginPath = join(this.pluginsDir, file);
-        const module = await importFreshModule(pluginPath);
-        
+        const module = await importModule(pluginPath);   // 首次加载用普通 import（利用缓存）
+
         if (module.default) {
           const plugin: Plugin = module.default;
           const fileName = file.replace(/\.(ts|js)$/i, "");
@@ -375,20 +382,21 @@ class PluginManager {
     };
   }
 
-  async handleMessage(msg: any): Promise<void> {
+  async handleMessage(msg: Api.Message): Promise<void> {
     if (!this.client) return;
     if (!msg) return;
 
-    for (const { instance } of this.plugins.values()) {
-      if (instance.onMessage) {
-        try {
-          await instance.onMessage(msg, this.client);
-        } catch (err) {
-          logger.error(`插件消息处理错误 ${instance.name}:`, err);
-          // 继续处理其他插件，不中断
-        }
-      }
-    }
+    // 并行执行所有插件的 onMessage（Promise.allSettled 不会因单个失败而中断其他插件）
+    const client = this.client;
+    await Promise.allSettled(
+      Array.from(this.plugins.values())
+        .filter(({ instance }) => typeof instance.onMessage === "function")
+        .map(({ instance }) =>
+          instance.onMessage!(msg, client).catch((err) => {
+            logger.error(`插件消息处理错误 ${instance.name}:`, err);
+          })
+        )
+    );
   }
 
   setAlias(alias: string, command: string): void {

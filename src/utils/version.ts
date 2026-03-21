@@ -1,26 +1,15 @@
 /**
  * 版本管理工具
- * 自动从 package.json 读取版本号
+ * 通过 import 直接读取 package.json（比 readFileSync 更快，无磁盘 IO）
  */
 
-import { readFileSync } from "fs";
-import { join } from "path";
+// Bun/TypeScript 原生支持 JSON import（tsconfig 中已启用 resolveJsonModule）
+import pkg from "../../package.json" with { type: "json" };
 
-// 读取 package.json 中的版本号
-function getVersionFromPackage(): string {
-  try {
-    const packagePath = join(process.cwd(), "package.json");
-    const packageJson = JSON.parse(readFileSync(packagePath, "utf-8"));
-    return packageJson.version || "1.0.0";
-  } catch {
-    return "1.0.0";
-  }
-}
+/** 当前版本号，直接从 package.json 读取 */
+export const VERSION: string = pkg.version || "1.0.0";
 
-// 版本号
-export const VERSION = getVersionFromPackage();
-
-// 显示版本
+/** 获取版本号 */
 export function getVersion(): string {
   return VERSION;
 }

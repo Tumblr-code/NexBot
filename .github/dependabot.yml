@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    ignore:
+      # sharp 涉及原生编译，谨慎自动升级
+      - dependency-name: "sharp"
+        update-types: ["version-update:semver-major"]

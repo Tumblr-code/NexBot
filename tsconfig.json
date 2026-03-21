@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2024", "DOM"],
-    "types": [],
+    "types": ["bun-types"],
     "outDir": "./dist",
     "rootDir": ".",
     "strict": true,
@@ -24,6 +24,6 @@
     },
     "baseUrl": "."
   },
-  "include": ["src/**/*", "plugins/**/*"],
+  "include": ["src/**/*", "plugins/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }
