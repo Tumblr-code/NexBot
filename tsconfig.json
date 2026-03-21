@@ -24,6 +24,6 @@
     },
     "baseUrl": "."
   },
-  "include": ["src/**/*", "plugins/**/*", "test/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "plugins"]
 }
