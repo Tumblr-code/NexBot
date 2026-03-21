@@ -24,7 +24,7 @@
   "author": "NexBot Team",
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.3.1",
     "sharp": "^0.33.5",
     "socks-proxy-agent": "^8.0.5",
     "telegram": "^2.26.22"
